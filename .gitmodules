@@ -1,3 +1,6 @@
 [submodule "liblci"]
 	path = liblci
-	url = https://github.com/danghvu/LCI.git
+  url = https://github.com/danghvu/LCI.git
+[submodule "libgpu/moderngpu"]
+	path = libgpu/moderngpu
+	url = https://github.com/vancemiller/moderngpu

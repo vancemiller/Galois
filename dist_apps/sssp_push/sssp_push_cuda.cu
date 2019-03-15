@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 /*
  * This file belongs to the Galois project, a C++ library for exploiting parallelism.
  * The code is being released under the terms of the 3-Clause BSD License (a
@@ -48,7 +49,7 @@ __global__ void InitializeGraph(CSRGraph graph, unsigned int __begin, unsigned i
   }
   // FP: "8 -> 9;
 }
-__global__ void FirstItr_SSSP(CSRGraph graph, unsigned int __begin, unsigned int __end, uint32_t * p_dist_current, uint32_t * p_dist_old, DynamicBitset& bitset_dist_current)
+__global__ void FirstItr_SSSP(CSRGraph graph, unsigned int __begin, unsigned int __end, uint32_t * p_dist_current, uint32_t * p_dist_old, DynamicBitset * bitset_dist_current)
 {
   unsigned tid = TID_1D;
   unsigned nthreads = TOTAL_THREADS_1D;
@@ -68,7 +69,7 @@ __global__ void FirstItr_SSSP(CSRGraph graph, unsigned int __begin, unsigned int
   typedef union np_shared<BlockScan::TempStorage, index_type, struct tb_np, struct warp_np<__kernel_tb_size/32>, struct fg_np<ITSIZE> > npsTy;
 
   // FP: "4 -> 5;
-  __shared__ npsTy nps ;
+  __shared__ npsTy nps;
   // FP: "5 -> 6;
   src_end = __end;
   src_rup = ((__begin) + roundup(((__end) - (__begin)), (blockDim.x)));
@@ -147,7 +148,7 @@ __global__ void FirstItr_SSSP(CSRGraph graph, unsigned int __begin, unsigned int
         nps.tb.owner = MAX_TB_SIZE + 1;
       }
       // FP: "43 -> 44;
-      assert(nps.tb.src < __kernel_tb_size);
+      //assert(nps.tb.src < __kernel_tb_size);
       src = _np_closure[nps.tb.src].src;
       // FP: "44 -> 45;
       for (int _np_j = threadIdx.x; _np_j < ne; _np_j += BLKSIZE)
@@ -163,7 +164,7 @@ __global__ void FirstItr_SSSP(CSRGraph graph, unsigned int __begin, unsigned int
           old_dist = atomicTestMin(&p_dist_current[dst], new_dist);
           if (old_dist > new_dist)
           {
-            bitset_dist_current.set(dst);
+            bitset_dist_current->set(dst);
           }
         }
       }
@@ -194,7 +195,7 @@ __global__ void FirstItr_SSSP(CSRGraph graph, unsigned int __begin, unsigned int
         }
         index_type _np_w_start = nps.warp.start[warpid];
         index_type _np_w_size = nps.warp.size[warpid];
-        assert(nps.warp.src[warpid] < __kernel_tb_size);
+        //assert(nps.warp.src[warpid] < __kernel_tb_size);
         src = _np_closure[nps.warp.src[warpid]].src;
         for (int _np_ii = _np_laneid; _np_ii < _np_w_size; _np_ii += 32)
         {
@@ -209,7 +210,7 @@ __global__ void FirstItr_SSSP(CSRGraph graph, unsigned int __begin, unsigned int
             old_dist = atomicTestMin(&p_dist_current[dst], new_dist);
             if (old_dist > new_dist)
             {
-              bitset_dist_current.set(dst);
+              bitset_dist_current->set(dst);
             }
           }
         }
@@ -239,7 +240,7 @@ __global__ void FirstItr_SSSP(CSRGraph graph, unsigned int __begin, unsigned int
       for (_np_i = threadIdx.x; _np_i < ITSIZE && _np.valid(_np_i); _np_i += BLKSIZE)
       {
         index_type jj;
-        assert(nps.fg.src[_np_i] < __kernel_tb_size);
+        //assert(nps.fg.src[_np_i] < __kernel_tb_size);
         src = _np_closure[nps.fg.src[_np_i]].src;
         jj= nps.fg.itvalue[_np_i];
         {
@@ -251,7 +252,7 @@ __global__ void FirstItr_SSSP(CSRGraph graph, unsigned int __begin, unsigned int
           old_dist = atomicTestMin(&p_dist_current[dst], new_dist);
           if (old_dist > new_dist)
           {
-            bitset_dist_current.set(dst);
+            bitset_dist_current->set(dst);
           }
         }
       }
@@ -261,12 +262,12 @@ __global__ void FirstItr_SSSP(CSRGraph graph, unsigned int __begin, unsigned int
       __syncthreads();
     }
     // FP: "111 -> 112;
-    assert(threadIdx.x < __kernel_tb_size);
+    //assert(threadIdx.x < __kernel_tb_size);
     src = _np_closure[threadIdx.x].src;
   }
   // FP: "113 -> 114;
 }
-__global__ void SSSP(CSRGraph graph, unsigned int __begin, unsigned int __end, uint32_t * p_dist_current, uint32_t * p_dist_old, DynamicBitset& bitset_dist_current, HGAccumulator<unsigned int> DGAccumulator_accum)
+__global__ void SSSP(CSRGraph graph, unsigned int __begin, unsigned int __end, uint32_t * p_dist_current, uint32_t * p_dist_old, DynamicBitset * bitset_dist_current, HGAccumulator<unsigned int> DGAccumulator_accum)
 {
   unsigned tid = TID_1D;
   unsigned nthreads = TOTAL_THREADS_1D;
@@ -377,7 +378,7 @@ __global__ void SSSP(CSRGraph graph, unsigned int __begin, unsigned int __end, u
         nps.tb.owner = MAX_TB_SIZE + 1;
       }
       // FP: "48 -> 49;
-      assert(nps.tb.src < __kernel_tb_size);
+      //assert(nps.tb.src < __kernel_tb_size);
       src = _np_closure[nps.tb.src].src;
       // FP: "49 -> 50;
       for (int _np_j = threadIdx.x; _np_j < ne; _np_j += BLKSIZE)
@@ -393,7 +394,7 @@ __global__ void SSSP(CSRGraph graph, unsigned int __begin, unsigned int __end, u
           old_dist = atomicTestMin(&p_dist_current[dst], new_dist);
           if (old_dist > new_dist)
           {
-            bitset_dist_current.set(dst);
+            bitset_dist_current->set(dst);
           }
         }
       }
@@ -424,7 +425,7 @@ __global__ void SSSP(CSRGraph graph, unsigned int __begin, unsigned int __end, u
         }
         index_type _np_w_start = nps.warp.start[warpid];
         index_type _np_w_size = nps.warp.size[warpid];
-        assert(nps.warp.src[warpid] < __kernel_tb_size);
+        //assert(nps.warp.src[warpid] < __kernel_tb_size);
         src = _np_closure[nps.warp.src[warpid]].src;
         for (int _np_ii = _np_laneid; _np_ii < _np_w_size; _np_ii += 32)
         {
@@ -439,7 +440,7 @@ __global__ void SSSP(CSRGraph graph, unsigned int __begin, unsigned int __end, u
             old_dist = atomicTestMin(&p_dist_current[dst], new_dist);
             if (old_dist > new_dist)
             {
-              bitset_dist_current.set(dst);
+              bitset_dist_current->set(dst);
             }
           }
         }
@@ -469,7 +470,7 @@ __global__ void SSSP(CSRGraph graph, unsigned int __begin, unsigned int __end, u
       for (_np_i = threadIdx.x; _np_i < ITSIZE && _np.valid(_np_i); _np_i += BLKSIZE)
       {
         index_type jj;
-        assert(nps.fg.src[_np_i] < __kernel_tb_size);
+        //assert(nps.fg.src[_np_i] < __kernel_tb_size);
         src = _np_closure[nps.fg.src[_np_i]].src;
         jj= nps.fg.itvalue[_np_i];
         {
@@ -481,7 +482,7 @@ __global__ void SSSP(CSRGraph graph, unsigned int __begin, unsigned int __end, u
           old_dist = atomicTestMin(&p_dist_current[dst], new_dist);
           if (old_dist > new_dist)
           {
-            bitset_dist_current.set(dst);
+            bitset_dist_current->set(dst);
           }
         }
       }
@@ -491,7 +492,7 @@ __global__ void SSSP(CSRGraph graph, unsigned int __begin, unsigned int __end, u
       __syncthreads();
     }
     // FP: "116 -> 117;
-    assert(threadIdx.x < __kernel_tb_size);
+    //assert(threadIdx.x < __kernel_tb_size);
     src = _np_closure[threadIdx.x].src;
   }
   // FP: "119 -> 120;
@@ -542,7 +543,7 @@ void InitializeGraph_cuda(unsigned int  __begin, unsigned int  __end, const uint
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  InitializeGraph <<<blocks, threads>>>(ctx->gg, __begin, __end, local_infinity, local_src_node, ctx->dist_current.data.gpu_wr_ptr(), ctx->dist_old.data.gpu_wr_ptr());
+  hipLaunchKernelGGL((InitializeGraph), dim3(blocks), dim3(threads), 0, 0, ctx->gg, __begin, __end, local_infinity, local_src_node, ctx->dist_current.data.gpu_wr_ptr(), ctx->dist_old.data.gpu_wr_ptr());
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;
@@ -574,7 +575,7 @@ void FirstItr_SSSP_cuda(unsigned int  __begin, unsigned int  __end, struct CUDA_
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  FirstItr_SSSP <<<blocks, __tb_FirstItr_SSSP>>>(ctx->gg, __begin, __end, ctx->dist_current.data.gpu_wr_ptr(), ctx->dist_old.data.gpu_wr_ptr(), *(ctx->dist_current.is_updated.gpu_rd_ptr()));
+  hipLaunchKernelGGL((FirstItr_SSSP), dim3(blocks), dim3(__tb_FirstItr_SSSP), 0, 0, ctx->gg, __begin, __end, ctx->dist_current.data.gpu_wr_ptr(), ctx->dist_old.data.gpu_wr_ptr(), (ctx->dist_current.is_updated.gpu_rd_ptr()));
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;
@@ -614,7 +615,7 @@ void SSSP_cuda(unsigned int  __begin, unsigned int  __end, unsigned int & DGAccu
   // FP: "7 -> 8;
   _DGAccumulator_accum.rv = DGAccumulator_accumval.gpu_wr_ptr();
   // FP: "8 -> 9;
-  SSSP <<<blocks, __tb_SSSP>>>(ctx->gg, __begin, __end, ctx->dist_current.data.gpu_wr_ptr(), ctx->dist_old.data.gpu_wr_ptr(), *(ctx->dist_current.is_updated.gpu_rd_ptr()), _DGAccumulator_accum);
+  hipLaunchKernelGGL((SSSP), dim3(blocks), dim3(__tb_SSSP), 0, 0, ctx->gg, __begin, __end, ctx->dist_current.data.gpu_wr_ptr(), ctx->dist_old.data.gpu_wr_ptr(), (ctx->dist_current.is_updated.gpu_rd_ptr()), _DGAccumulator_accum);
   // FP: "9 -> 10;
   check_cuda_kernel;
   // FP: "10 -> 11;
@@ -664,7 +665,7 @@ void SSSPSanityCheck_cuda(unsigned int  __begin, unsigned int  __end, uint64_t &
   // FP: "11 -> 12;
   _DGMax.rv = DGMaxval.gpu_wr_ptr();
   // FP: "12 -> 13;
-  SSSPSanityCheck <<<blocks, threads>>>(ctx->gg, __begin, __end, local_infinity, ctx->dist_current.data.gpu_wr_ptr(), _DGAccumulator_sum, _DGMax);
+  hipLaunchKernelGGL((SSSPSanityCheck), dim3(blocks), dim3(threads), 0, 0, ctx->gg, __begin, __end, local_infinity, ctx->dist_current.data.gpu_wr_ptr(), _DGAccumulator_sum, _DGMax);
   // FP: "13 -> 14;
   check_cuda_kernel;
   // FP: "14 -> 15;

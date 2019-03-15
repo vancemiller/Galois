@@ -11,10 +11,10 @@
 
 #define CUDA_SAFE_CALL_NO_SYNC(call)                                           \
   {                                                                            \
-    cudaError err = call;                                                      \
-    if (cudaSuccess != err) {                                                  \
+    hipError_t err = call;                                                      \
+    if (hipSuccess != err) {                                                  \
       fprintf(stderr, "Cuda error in file '%s' in line %i : %s.\n", __FILE__,  \
-              __LINE__, cudaGetErrorString(err));                              \
+              __LINE__, hipGetErrorString(err));                              \
       exit(EXIT_FAILURE);                                                      \
     }                                                                          \
   }
@@ -23,15 +23,15 @@
 
 #define CUDA_SAFE_THREAD_SYNC()                                                \
   {                                                                            \
-    cudaError err = CUT_DEVICE_SYNCHRONIZE();                                  \
-    if (cudaSuccess != err) {                                                  \
+    hipError_t err = CUT_DEVICE_SYNCHRONIZE();                                  \
+    if (hipSuccess != err) {                                                  \
       fprintf(stderr, "Cuda error in file '%s' in line %i : %s.\n", __FILE__,  \
-              __LINE__, cudaGetErrorString(err));                              \
+              __LINE__, hipGetErrorString(err));                              \
     }                                                                          \
   }
 
 // from http://forums.nvidia.com/index.php?showtopic=186669
-static __device__ uint get_smid(void) {
+/*static __device__ uint get_smid(void) {
   uint ret;
   asm("mov.u32 %0, %smid;" : "=r"(ret));
   return ret;
@@ -42,9 +42,9 @@ static __device__ uint get_warpid(void) {
   asm("mov.u32 %0, %warpid;" : "=r"(ret));
   return ret;
 }
-
+*/
 // since cub::WarpScan doesn't work very well with disabled threads in the warp
-__device__ __forceinline__ void warp_active_count(int& first, int& offset,
+static __device__ __forceinline__ void warp_active_count(int& first, int& offset,
                                                   int& total) {
   unsigned int active = __ballot(1);
   total               = __popc(active);
@@ -53,7 +53,7 @@ __device__ __forceinline__ void warp_active_count(int& first, int& offset,
 }
 
 // since cub::WarpScan doesn't work very well with disabled threads in the warp
-__device__ __forceinline__ void
+static __device__ __forceinline__ void
 warp_active_count_zero_active(int& first, int& offset, int& total) {
   unsigned int active = __ballot(1);
   total               = __popc(active);

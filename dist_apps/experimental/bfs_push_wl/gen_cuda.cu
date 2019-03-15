@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 /*
  * This file belongs to the Galois project, a C++ library for exploiting parallelism.
  * The code is being released under the terms of the 3-Clause BSD License (a
@@ -497,7 +498,7 @@ void InitializeGraph_cuda(unsigned int  __begin, unsigned int  __end, const uint
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  InitializeGraph <<<blocks, threads>>>(ctx->gg, ctx->dist_current.is_updated.gpu_rd_ptr(), ctx->numNodesWithEdges, __begin, __end, local_infinity, local_src_node, ctx->dist_current.data.gpu_wr_ptr(), ctx->dist_old.data.gpu_wr_ptr());
+  hipLaunchKernelGGL((InitializeGraph), dim3(blocks), dim3(threads), 0, 0, ctx->gg, ctx->dist_current.is_updated.gpu_rd_ptr(), ctx->numNodesWithEdges, __begin, __end, local_infinity, local_src_node, ctx->dist_current.data.gpu_wr_ptr(), ctx->dist_old.data.gpu_wr_ptr());
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;
@@ -517,7 +518,7 @@ void FirstItr_BFS_cuda(unsigned int  __begin, unsigned int  __end, struct CUDA_C
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  FirstItr_BFS <<<blocks, __tb_FirstItr_BFS>>>(ctx->gg, ctx->dist_current.is_updated.gpu_rd_ptr(), ctx->numNodesWithEdges, __begin, __end, ctx->dist_current.data.gpu_wr_ptr(), ctx->dist_old.data.gpu_wr_ptr());
+  hipLaunchKernelGGL((FirstItr_BFS), dim3(blocks), dim3(__tb_FirstItr_BFS), 0, 0, ctx->gg, ctx->dist_current.is_updated.gpu_rd_ptr(), ctx->numNodesWithEdges, __begin, __end, ctx->dist_current.data.gpu_wr_ptr(), ctx->dist_old.data.gpu_wr_ptr());
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;
@@ -541,7 +542,7 @@ void BFS_cuda(unsigned int  __begin, unsigned int  __end, int & __retval, struct
   HGAccumulator<int> _rv;
   *(retval.cpu_wr_ptr()) = 0;
   _rv.rv = retval.gpu_wr_ptr();
-  BFS <<<blocks, __tb_BFS>>>(ctx->gg, ctx->dist_current.is_updated.gpu_rd_ptr(), ctx->numNodesWithEdges, __begin, __end, ctx->dist_current.data.gpu_wr_ptr(), ctx->dist_old.data.gpu_wr_ptr(), _rv);
+  hipLaunchKernelGGL((BFS), dim3(blocks), dim3(__tb_BFS), 0, 0, ctx->gg, ctx->dist_current.is_updated.gpu_rd_ptr(), ctx->numNodesWithEdges, __begin, __end, ctx->dist_current.data.gpu_wr_ptr(), ctx->dist_old.data.gpu_wr_ptr(), _rv);
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;

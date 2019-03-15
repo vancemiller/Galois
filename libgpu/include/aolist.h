@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #pragma once
 /*
    aolist.h
@@ -35,9 +36,9 @@ struct AppendOnlyList {
     } else {
       list.alloc(nsize);
       dl = list.gpu_wr_ptr();
-      CUDA_SAFE_CALL(cudaMalloc(&dindex, 1 * sizeof(int)));
-      CUDA_SAFE_CALL(cudaMemcpy((void*)dindex, &zero, 1 * sizeof(zero),
-                                cudaMemcpyHostToDevice));
+      CUDA_SAFE_CALL(hipMalloc(&dindex, 1 * sizeof(int)));
+      CUDA_SAFE_CALL(hipMemcpy((void*)dindex, &zero, 1 * sizeof(zero),
+                                hipMemcpyHostToDevice));
       index = 0;
     }
   }
@@ -61,16 +62,16 @@ struct AppendOnlyList {
   }
 
   void reset() {
-    CUDA_SAFE_CALL(cudaMemcpy((void*)dindex, &zero, 1 * sizeof(zero),
-                              cudaMemcpyHostToDevice));
+    CUDA_SAFE_CALL(hipMemcpy((void*)dindex, &zero, 1 * sizeof(zero),
+                              hipMemcpyHostToDevice));
   }
 
   __device__ __host__ int nitems() {
-#ifdef __CUDA_ARCH__
+#ifdef __HIP_DEVICE_COMPILE__
     return *dindex;
 #else
-    CUDA_SAFE_CALL(cudaMemcpy(&index, (void*)dindex, 1 * sizeof(index),
-                              cudaMemcpyDeviceToHost));
+    CUDA_SAFE_CALL(hipMemcpy(&index, (void*)dindex, 1 * sizeof(index),
+                              hipMemcpyDeviceToHost));
     return index;
 #endif
   }
@@ -114,7 +115,7 @@ struct AppendOnlyList {
       assert(lindex <= size);
     }
 
-    lindex = cub::ShuffleIndex(lindex, first);
+    lindex = cub::ShuffleIndex(lindex, first, 32, 0xFFFFFFFF);
     // lindex = cub::ShuffleIndex(lindex, first); // CUB > 1.3.1
     return lindex + offset;
   }
@@ -206,8 +207,8 @@ struct AppendOnlyList {
     int nsize =
         instr_read_array(n, of, sizeof(int), size, list.cpu_wr_ptr(true));
     list.gpu_rd_ptr();
-    check_cuda(cudaMemcpy((void*)dindex, &nsize, 1 * sizeof(nsize),
-                          cudaMemcpyHostToDevice));
+    check_cuda(hipMemcpy((void*)dindex, &nsize, 1 * sizeof(nsize),
+                          hipMemcpyHostToDevice));
     trace_close(of);
     return;
   }

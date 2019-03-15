@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 /*
  * This file belongs to the Galois project, a C++ library for exploiting parallelism.
  * The code is being released under the terms of the 3-Clause BSD License (a
@@ -50,7 +51,7 @@ __global__ void ResetGraph(CSRGraph graph, unsigned int __begin, unsigned int __
   }
   // FP: "10 -> 11;
 }
-__global__ void InitializeGraph(CSRGraph graph, unsigned int __begin, unsigned int __end, uint32_t * p_nout, DynamicBitset& bitset_nout)
+__global__ void InitializeGraph(CSRGraph graph, unsigned int __begin, unsigned int __end, uint32_t * p_nout, DynamicBitset * bitset_nout)
 {
   unsigned tid = TID_1D;
   unsigned nthreads = TOTAL_THREADS_1D;
@@ -147,7 +148,7 @@ __global__ void InitializeGraph(CSRGraph graph, unsigned int __begin, unsigned i
         nps.tb.owner = MAX_TB_SIZE + 1;
       }
       // FP: "42 -> 43;
-      assert(nps.tb.src < __kernel_tb_size);
+      //assert(nps.tb.src < __kernel_tb_size);
       // FP: "43 -> 44;
       for (int _np_j = threadIdx.x; _np_j < ne; _np_j += BLKSIZE)
       {
@@ -157,7 +158,7 @@ __global__ void InitializeGraph(CSRGraph graph, unsigned int __begin, unsigned i
           index_type dst;
           dst = graph.getAbsDestination(nbr);
           atomicTestAdd(&p_nout[dst], (uint32_t)1);
-          bitset_nout.set(dst);
+          bitset_nout->set(dst);
         }
       }
       // FP: "51 -> 52;
@@ -187,7 +188,7 @@ __global__ void InitializeGraph(CSRGraph graph, unsigned int __begin, unsigned i
         }
         index_type _np_w_start = nps.warp.start[warpid];
         index_type _np_w_size = nps.warp.size[warpid];
-        assert(nps.warp.src[warpid] < __kernel_tb_size);
+        //assert(nps.warp.src[warpid] < __kernel_tb_size);
         for (int _np_ii = _np_laneid; _np_ii < _np_w_size; _np_ii += 32)
         {
           index_type nbr;
@@ -196,7 +197,7 @@ __global__ void InitializeGraph(CSRGraph graph, unsigned int __begin, unsigned i
             index_type dst;
             dst = graph.getAbsDestination(nbr);
             atomicTestAdd(&p_nout[dst], (uint32_t)1);
-            bitset_nout.set(dst);
+            bitset_nout->set(dst);
           }
         }
       }
@@ -225,13 +226,13 @@ __global__ void InitializeGraph(CSRGraph graph, unsigned int __begin, unsigned i
       for (_np_i = threadIdx.x; _np_i < ITSIZE && _np.valid(_np_i); _np_i += BLKSIZE)
       {
         index_type nbr;
-        assert(nps.fg.src[_np_i] < __kernel_tb_size);
+        //assert(nps.fg.src[_np_i] < __kernel_tb_size);
         nbr= nps.fg.itvalue[_np_i];
         {
           index_type dst;
           dst = graph.getAbsDestination(nbr);
           atomicTestAdd(&p_nout[dst], (uint32_t)1);
-          bitset_nout.set(dst);
+          bitset_nout->set(dst);
         }
       }
       // FP: "92 -> 93;
@@ -240,7 +241,7 @@ __global__ void InitializeGraph(CSRGraph graph, unsigned int __begin, unsigned i
       __syncthreads();
     }
     // FP: "95 -> 96;
-    assert(threadIdx.x < __kernel_tb_size);
+    //assert(threadIdx.x < __kernel_tb_size);
   }
   // FP: "97 -> 98;
 }
@@ -279,7 +280,7 @@ __global__ void PageRank_delta(CSRGraph graph, unsigned int __begin, unsigned in
   DGAccumulator_accum.thread_exit<cub::BlockReduce<unsigned int, TB_SIZE> >(DGAccumulator_accum_ts);
   // FP: "18 -> 19;
 }
-__global__ void PageRank(CSRGraph graph, unsigned int __begin, unsigned int __end, float * p_delta, float * p_residual, DynamicBitset& bitset_residual)
+__global__ void PageRank(CSRGraph graph, unsigned int __begin, unsigned int __end, float * p_delta, float * p_residual, DynamicBitset * bitset_residual)
 {
   unsigned tid = TID_1D;
   unsigned nthreads = TOTAL_THREADS_1D;
@@ -377,7 +378,7 @@ __global__ void PageRank(CSRGraph graph, unsigned int __begin, unsigned int __en
         nps.tb.owner = MAX_TB_SIZE + 1;
       }
       // FP: "42 -> 43;
-      assert(nps.tb.src < __kernel_tb_size);
+      //assert(nps.tb.src < __kernel_tb_size);
       src = _np_closure[nps.tb.src].src;
       // FP: "43 -> 44;
       for (int _np_j = threadIdx.x; _np_j < ne; _np_j += BLKSIZE)
@@ -390,7 +391,7 @@ __global__ void PageRank(CSRGraph graph, unsigned int __begin, unsigned int __en
           if (p_delta[dst] > 0)
           {
             atomicTestAdd(&p_residual[src], p_delta[dst]);
-            bitset_residual.set(src);
+            bitset_residual->set(src);
           }
         }
       }
@@ -421,7 +422,7 @@ __global__ void PageRank(CSRGraph graph, unsigned int __begin, unsigned int __en
         }
         index_type _np_w_start = nps.warp.start[warpid];
         index_type _np_w_size = nps.warp.size[warpid];
-        assert(nps.warp.src[warpid] < __kernel_tb_size);
+        //assert(nps.warp.src[warpid] < __kernel_tb_size);
         src = _np_closure[nps.warp.src[warpid]].src;
         for (int _np_ii = _np_laneid; _np_ii < _np_w_size; _np_ii += 32)
         {
@@ -433,7 +434,7 @@ __global__ void PageRank(CSRGraph graph, unsigned int __begin, unsigned int __en
             if (p_delta[dst] > 0)
             {
               atomicTestAdd(&p_residual[src], p_delta[dst]);
-              bitset_residual.set(src);
+              bitset_residual->set(src);
             }
           }
         }
@@ -463,7 +464,7 @@ __global__ void PageRank(CSRGraph graph, unsigned int __begin, unsigned int __en
       for (_np_i = threadIdx.x; _np_i < ITSIZE && _np.valid(_np_i); _np_i += BLKSIZE)
       {
         index_type nbr;
-        assert(nps.fg.src[_np_i] < __kernel_tb_size);
+        //assert(nps.fg.src[_np_i] < __kernel_tb_size);
         src = _np_closure[nps.fg.src[_np_i]].src;
         nbr= nps.fg.itvalue[_np_i];
         {
@@ -472,7 +473,7 @@ __global__ void PageRank(CSRGraph graph, unsigned int __begin, unsigned int __en
           if (p_delta[dst] > 0)
           {
             atomicTestAdd(&p_residual[src], p_delta[dst]);
-            bitset_residual.set(src);
+            bitset_residual->set(src);
           }
         }
       }
@@ -482,7 +483,7 @@ __global__ void PageRank(CSRGraph graph, unsigned int __begin, unsigned int __en
       __syncthreads();
     }
     // FP: "101 -> 102;
-    assert(threadIdx.x < __kernel_tb_size);
+    //assert(threadIdx.x < __kernel_tb_size);
     src = _np_closure[threadIdx.x].src;
   }
   // FP: "103 -> 104;
@@ -566,7 +567,7 @@ void ResetGraph_cuda(unsigned int  __begin, unsigned int  __end, const float & l
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  ResetGraph <<<blocks, threads>>>(ctx->gg, __begin, __end, local_alpha, ctx->delta.data.gpu_wr_ptr(), ctx->nout.data.gpu_wr_ptr(), ctx->residual.data.gpu_wr_ptr(), ctx->value.data.gpu_wr_ptr());
+  hipLaunchKernelGGL((ResetGraph), dim3(blocks), dim3(threads), 0, 0, ctx->gg, __begin, __end, local_alpha, ctx->delta.data.gpu_wr_ptr(), ctx->nout.data.gpu_wr_ptr(), ctx->residual.data.gpu_wr_ptr(), ctx->value.data.gpu_wr_ptr());
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;
@@ -598,7 +599,7 @@ void InitializeGraph_cuda(unsigned int  __begin, unsigned int  __end, struct CUD
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  InitializeGraph <<<blocks, __tb_InitializeGraph>>>(ctx->gg, __begin, __end, ctx->nout.data.gpu_wr_ptr(), *(ctx->nout.is_updated.gpu_rd_ptr()));
+  hipLaunchKernelGGL((InitializeGraph), dim3(blocks), dim3(__tb_InitializeGraph), 0, 0, ctx->gg, __begin, __end, ctx->nout.data.gpu_wr_ptr(), (ctx->nout.is_updated.gpu_rd_ptr()));
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;
@@ -638,7 +639,7 @@ void PageRank_delta_cuda(unsigned int  __begin, unsigned int  __end, unsigned in
   // FP: "7 -> 8;
   _DGAccumulator_accum.rv = DGAccumulator_accumval.gpu_wr_ptr();
   // FP: "8 -> 9;
-  PageRank_delta <<<blocks, threads>>>(ctx->gg, __begin, __end, local_alpha, local_tolerance, ctx->delta.data.gpu_wr_ptr(), ctx->nout.data.gpu_wr_ptr(), ctx->residual.data.gpu_wr_ptr(), ctx->value.data.gpu_wr_ptr(), _DGAccumulator_accum);
+  hipLaunchKernelGGL((PageRank_delta), dim3(blocks), dim3(threads), 0, 0, ctx->gg, __begin, __end, local_alpha, local_tolerance, ctx->delta.data.gpu_wr_ptr(), ctx->nout.data.gpu_wr_ptr(), ctx->residual.data.gpu_wr_ptr(), ctx->value.data.gpu_wr_ptr(), _DGAccumulator_accum);
   // FP: "9 -> 10;
   check_cuda_kernel;
   // FP: "10 -> 11;
@@ -672,7 +673,7 @@ void PageRank_cuda(unsigned int  __begin, unsigned int  __end, struct CUDA_Conte
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  PageRank <<<blocks, __tb_PageRank>>>(ctx->gg, __begin, __end, ctx->delta.data.gpu_wr_ptr(), ctx->residual.data.gpu_wr_ptr(), *(ctx->residual.is_updated.gpu_rd_ptr()));
+  hipLaunchKernelGGL((PageRank), dim3(blocks), dim3(__tb_PageRank), 0, 0, ctx->gg, __begin, __end, ctx->delta.data.gpu_wr_ptr(), ctx->residual.data.gpu_wr_ptr(), (ctx->residual.is_updated.gpu_rd_ptr()));
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;
@@ -760,7 +761,7 @@ void PageRankSanity_cuda(unsigned int  __begin, unsigned int  __end, uint64_t & 
   // FP: "31 -> 32;
   _min_value.rv = min_valueval.gpu_wr_ptr();
   // FP: "32 -> 33;
-  PageRankSanity <<<blocks, threads>>>(ctx->gg, __begin, __end, local_tolerance, ctx->residual.data.gpu_wr_ptr(), ctx->value.data.gpu_wr_ptr(), _DGAccumulator_residual_over_tolerance, _DGAccumulator_sum, _DGAccumulator_sum_residual, _max_residual, _max_value, _min_residual, _min_value);
+  hipLaunchKernelGGL((PageRankSanity), dim3(blocks), dim3(threads), 0, 0, ctx->gg, __begin, __end, local_tolerance, ctx->residual.data.gpu_wr_ptr(), ctx->value.data.gpu_wr_ptr(), _DGAccumulator_residual_over_tolerance, _DGAccumulator_sum, _DGAccumulator_sum_residual, _max_residual, _max_value, _min_residual, _min_value);
   // FP: "33 -> 34;
   check_cuda_kernel;
   // FP: "34 -> 35;

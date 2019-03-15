@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 /*
    worklist.h
 
@@ -67,7 +68,7 @@ struct Worklist {
   bool f_will_write;
 
   Worklist(size_t nsize) {
-    printf("Worklist size: %llu\n", nsize);
+    printf("Worklist size: %zu\n", nsize);
 #ifdef SLOTS
     currslot = 0;
 #endif
@@ -76,38 +77,38 @@ struct Worklist {
       dwl = NULL;
     } else {
       wl = (int*)calloc(nsize, sizeof(int));
-      CUDA_SAFE_CALL(cudaMalloc(&dwl, nsize * sizeof(int)));
-      CUDA_SAFE_CALL(cudaMalloc(&dnsize, 1 * sizeof(int)));
+      CUDA_SAFE_CALL(hipMalloc(&dwl, nsize * sizeof(int)));
+      CUDA_SAFE_CALL(hipMalloc(&dnsize, 1 * sizeof(int)));
 #ifdef SLOTS
-      CUDA_SAFE_CALL(cudaMalloc(&dcounters, 2 * sizeof(int)));
+      CUDA_SAFE_CALL(hipMalloc(&dcounters, 2 * sizeof(int)));
       dindex = &dcounters[currslot];
 #else
-      CUDA_SAFE_CALL(cudaMalloc(&dindex, 1 * sizeof(int)));
+      CUDA_SAFE_CALL(hipMalloc(&dindex, 1 * sizeof(int)));
 #endif
-      // CUDA_SAFE_CALL(cudaMalloc(&dindex, 2 * sizeof(int)));
+      // CUDA_SAFE_CALL(hipMalloc(&dindex, 2 * sizeof(int)));
 
-      init_wl<<<1, 1>>>(nsize, dnsize, dindex);
+      hipLaunchKernelGGL((init_wl), dim3(1), dim3(1), 0, 0, nsize, dnsize, dindex);
 
-      // CUDA_SAFE_CALL(cudaMemcpy(dnsize, &nsize, 1 * sizeof(int),
-      // cudaMemcpyHostToDevice)); CUDA_SAFE_CALL(cudaMemcpy((void *) dindex,
-      // &zero, 1 * sizeof(zero), cudaMemcpyHostToDevice));
+      // CUDA_SAFE_CALL(hipMemcpy(dnsize, &nsize, 1 * sizeof(int),
+      // hipMemcpyHostToDevice)); CUDA_SAFE_CALL(hipMemcpy((void *) dindex,
+      // &zero, 1 * sizeof(zero), hipMemcpyHostToDevice));
 
 #ifdef COUNT_ATOMICS
-      CUDA_SAFE_CALL(cudaMalloc(&atomic_counter, sizeof(int) * 1));
-      CUDA_SAFE_CALL(cudaMemcpy((void*)atomic_counter, &zero, 1 * sizeof(zero),
-                                cudaMemcpyHostToDevice));
+      CUDA_SAFE_CALL(hipMalloc(&atomic_counter, sizeof(int) * 1));
+      CUDA_SAFE_CALL(hipMemcpy((void*)atomic_counter, &zero, 1 * sizeof(zero),
+                                hipMemcpyHostToDevice));
 #endif
 
 #ifdef ATOMIC_DENSITY
       CUDA_SAFE_CALL(
-          cudaMalloc(&atomic_density, sizeof(unsigned int) * (32 + 1)));
+          hipMalloc(&atomic_density, sizeof(unsigned int) * (32 + 1)));
       CUDA_SAFE_CALL(
-          cudaMemset(atomic_density, 0, sizeof(unsigned int) * (32 + 1)));
+          hipMemset(atomic_density, 0, sizeof(unsigned int) * (32 + 1)));
 #endif
 
-      // CUDA_SAFE_CALL(cudaMalloc(&rcounter, 1 * sizeof(int)));
-      // CUDA_SAFE_CALL(cudaMemcpy((void *) rcounter, &zero, 1 * sizeof(zero),
-      // cudaMemcpyHostToDevice));
+      // CUDA_SAFE_CALL(hipMalloc(&rcounter, 1 * sizeof(int)));
+      // CUDA_SAFE_CALL(hipMemcpy((void *) rcounter, &zero, 1 * sizeof(zero),
+      // hipMemcpyHostToDevice));
 
       prio.alloc(nsize);
       // prio.cpu_wr_ptr();
@@ -120,16 +121,16 @@ struct Worklist {
 
   void free() {
     ::free(wl);
-    CUDA_SAFE_CALL(cudaFree(dwl));
-    CUDA_SAFE_CALL(cudaFree(dnsize));
+    CUDA_SAFE_CALL(hipFree(dwl));
+    CUDA_SAFE_CALL(hipFree(dnsize));
 #ifdef SLOTS
-    CUDA_SAFE_CALL(cudaFree(dcounters));
+    CUDA_SAFE_CALL(hipFree(dcounters));
 #else
-    CUDA_SAFE_CALL(cudaFree(dindex));
+    CUDA_SAFE_CALL(hipFree(dindex));
 #endif
 
 #ifdef COUNT_ATOMICS
-    CUDA_SAFE_CALL(cudaFree(atomic_counter));
+    CUDA_SAFE_CALL(hipFree(atomic_counter));
 #endif
 
     prio.free();
@@ -149,26 +150,26 @@ struct Worklist {
     currslot     = 0;
     dindex       = &dcounters[currslot];
 
-    CUDA_SAFE_CALL(cudaMemcpy((void*)dcounters, &index, 2 * sizeof(nsize),
-                              cudaMemcpyHostToDevice));
+    CUDA_SAFE_CALL(hipMemcpy((void*)dcounters, &index, 2 * sizeof(nsize),
+                              hipMemcpyHostToDevice));
 #else
-    CUDA_SAFE_CALL(cudaMemcpy((void*)dindex, &nsize, 1 * sizeof(nsize),
-                              cudaMemcpyHostToDevice));
+    CUDA_SAFE_CALL(hipMemcpy((void*)dindex, &nsize, 1 * sizeof(nsize),
+                              hipMemcpyHostToDevice));
 #endif
     CUDA_SAFE_CALL(
-        cudaMemcpy(dwl, wl, nsize * sizeof(int), cudaMemcpyHostToDevice));
+        hipMemcpy(dwl, wl, nsize * sizeof(int), hipMemcpyHostToDevice));
   }
 
   void update_cpu() {
     int nsize = nitems();
     CUDA_SAFE_CALL(
-        cudaMemcpy(wl, dwl, nsize * sizeof(int), cudaMemcpyDeviceToHost));
+        hipMemcpy(wl, dwl, nsize * sizeof(int), hipMemcpyDeviceToHost));
   }
 
   void display_items() {
     int nsize = nitems();
     CUDA_SAFE_CALL(
-        cudaMemcpy(wl, dwl, nsize * sizeof(int), cudaMemcpyDeviceToHost));
+        hipMemcpy(wl, dwl, nsize * sizeof(int), hipMemcpyDeviceToHost));
 
     printf("WL: ");
     for (int i = 0; i < nsize; i++)
@@ -214,18 +215,18 @@ struct Worklist {
 
     TRACE of  = trace_open(n, "r");
     int nsize = instr_read_array_gpu(n, of, sizeof(wl[0]), length, dwl, wl);
-    CUDA_SAFE_CALL(cudaMemcpy((void*)dindex, &nsize, 1 * sizeof(nsize),
-                              cudaMemcpyHostToDevice));
+    CUDA_SAFE_CALL(hipMemcpy((void*)dindex, &nsize, 1 * sizeof(nsize),
+                              hipMemcpyHostToDevice));
     trace_close(of);
     return;
   }
 
 #ifdef SLOTS
   __device__ __host__ inline void reset_next_slot() const {
-#ifdef __CUDA_ARCH__
+#ifdef __HIP_DEVICE_COMPILE__
     dcounters[1 ^ currslot] = 0;
 #else
-    reset_wl<<<1, 1>>>(&dcounters[1 ^ currslot]);
+    hipLaunchKernelGGL((reset_wl), dim3(1), dim3(1), 0, 0, &dcounters[1 ^ currslot]);
 #endif
   }
 
@@ -241,26 +242,26 @@ struct Worklist {
 #endif /* SLOTS */
 
   __device__ __host__ inline void reset() {
-#ifdef __CUDA_ARCH__
+#ifdef __HIP_DEVICE_COMPILE__
     *(volatile int*)dindex = 0;
     // atomicAdd(rcounter, 1);
 #else
-    // CUDA_SAFE_CALL(cudaMemcpy((void *) dindex, &zero, 1 * sizeof(zero),
-    // cudaMemcpyHostToDevice));
-    reset_wl<<<1, 1>>>(dindex);
+    // CUDA_SAFE_CALL(hipMemcpy((void *) dindex, &zero, 1 * sizeof(zero),
+    // hipMemcpyHostToDevice));
+    hipLaunchKernelGGL((reset_wl), dim3(1), dim3(1), 0, 0, dindex);
 #endif
   }
 
   __device__ __host__ inline int nitems() {
-#ifdef __CUDA_ARCH__
+#ifdef __HIP_DEVICE_COMPILE__
     // return atomicAdd(dindex, 0);
     // return *dindex;
     return *((volatile int*)dindex);
 #else
     // if(f_will_write)
 
-    CUDA_SAFE_CALL(cudaMemcpy(&index, (void*)dindex, 1 * sizeof(index),
-                              cudaMemcpyDeviceToHost));
+    CUDA_SAFE_CALL(hipMemcpy(&index, (void*)dindex, 1 * sizeof(index),
+                              hipMemcpyDeviceToHost));
 
     // f_will_write = 0;
     return index;
@@ -343,7 +344,7 @@ struct Worklist {
       // counting density makes no sense -- it is always 1
     }
 
-    lindex = cub::ShuffleIndex(lindex, first);
+    lindex = cub::ShuffleIndex(lindex, first, 32, 0xFFFFFFFF);
     // lindex = cub::ShuffleIndex(lindex, first); // CUB > 1.3.1
 
     return lindex + offset;
@@ -364,7 +365,7 @@ struct Worklist {
 #endif
     }
 
-    lindex = cub::ShuffleIndex(lindex, first);
+    lindex = cub::ShuffleIndex(lindex, first, 32, 0xFFFFFFFF);
     // lindex = cub::ShuffleIndex(lindex, first); // CUB > 1.3.1
 
     return lindex + offset;
@@ -384,7 +385,7 @@ struct Worklist {
 #endif
     }
 
-    lindex = cub::ShuffleIndex(lindex, 0);
+    lindex = cub::ShuffleIndex(lindex, 0, 32, 0xFFFFFFFF);
     // lindex = cub::ShuffleIndex(lindex, 0); // CUB > 1.3.1
 
     return lindex + offset;
@@ -545,7 +546,7 @@ struct Worklist2 : public Worklist {
 };
 
 struct WorklistT : public Worklist2 {
-  cudaTextureObject_t tx;
+  hipTextureObject_t tx;
 
   WorklistT() : Worklist2() {}
 
@@ -553,24 +554,24 @@ struct WorklistT : public Worklist2 {
     // from here:
     // http://devblogs.nvidia.com/parallelforall/cuda-pro-tip-kepler-texture-objects-improve-performance-and-flexibility/
 
-    cudaResourceDesc resDesc;
+    hipResourceDesc resDesc;
     memset(&resDesc, 0, sizeof(resDesc));
-    resDesc.resType                = cudaResourceTypeLinear;
+    resDesc.resType                = hipResourceTypeLinear;
     resDesc.res.linear.devPtr      = dwl;
-    resDesc.res.linear.desc.f      = cudaChannelFormatKindSigned;
+    resDesc.res.linear.desc.f      = hipChannelFormatKindSigned;
     resDesc.res.linear.desc.x      = 32; // bits per channel
     resDesc.res.linear.sizeInBytes = length * sizeof(int);
 
-    cudaTextureDesc texDesc;
+    hipTextureDesc texDesc;
     memset(&texDesc, 0, sizeof(texDesc));
-    texDesc.readMode = cudaReadModeElementType;
+    texDesc.readMode = hipReadModeElementType;
 
     // create texture object: we only have to do this once!
-    CUDA_SAFE_CALL(cudaCreateTextureObject(&tx, &resDesc, &texDesc, NULL));
+    CUDA_SAFE_CALL(hipCreateTextureObject(&tx, &resDesc, &texDesc, NULL));
   }
 
   void free() {
-    CUDA_SAFE_CALL(cudaDestroyTextureObject(tx));
+    CUDA_SAFE_CALL(hipDestroyTextureObject(tx));
     Worklist2::free();
   }
 
@@ -611,7 +612,7 @@ struct Worklist2Light {
   }
 
   __device__ __host__ inline int nitems() {
-#ifdef __CUDA_ARCH__
+#ifdef __HIP_DEVICE_COMPILE__
     // return atomicAdd(dindex, 0);
     // return *dindex;
     return *((volatile int*)dindex);
@@ -620,8 +621,8 @@ struct Worklist2Light {
     return 0;
     // if(f_will_write)
 
-    // CUDA_SAFE_CALL(cudaMemcpy(&index, (void *) dindex, 1 * sizeof(index),
-    // cudaMemcpyDeviceToHost));
+    // CUDA_SAFE_CALL(hipMemcpy(&index, (void *) dindex, 1 * sizeof(index),
+    // hipMemcpyDeviceToHost));
 
     // f_will_write = 0;
     // return index;
@@ -642,10 +643,10 @@ struct Worklist2Light {
 
 #ifdef SLOTS
   __device__ __host__ inline void reset_next_slot() const {
-#ifdef __CUDA_ARCH__
+#ifdef __HIP_DEVICE_COMPILE__
     dcounters[1 ^ currslot] = 0;
 #else
-    reset_wl<<<1, 1>>>(&dcounters[1 ^ currslot]);
+    hipLaunchKernelGGL((reset_wl), dim3(1), dim3(1), 0, 0, &dcounters[1 ^ currslot]);
 #endif
   }
 #endif
@@ -682,7 +683,7 @@ struct Worklist2Light {
       // counting density makes no sense -- it is always 1
     }
 
-    lindex = cub::ShuffleIndex(lindex, first);
+    lindex = cub::ShuffleIndex(lindex, first, 32, 0xFFFFFFFF);
     // lindex = cub::ShuffleIndex(lindex, first); // CUB > 1.3.1
 
     return lindex + offset;
@@ -701,12 +702,12 @@ struct Worklist2Light {
 
 #ifdef COUNT_ATOMICS
 static __device__ __host__ int get_atomic_count(Worklist wl) {
-#ifdef __CUDA_ARCH__
+#ifdef __HIP_DEVICE_COMPILE__
   return *wl.atomic_counter;
 #else
   int count = 0;
-  CUDA_SAFE_CALL(cudaMemcpy(&count, wl.atomic_counter, sizeof(int) * 1,
-                            cudaMemcpyDeviceToHost));
+  CUDA_SAFE_CALL(hipMemcpy(&count, wl.atomic_counter, sizeof(int) * 1,
+                            hipMemcpyDeviceToHost));
   return count;
 #endif
 }
@@ -715,13 +716,13 @@ static __device__ __host__ int get_atomic_count(Worklist wl) {
 #ifdef ATOMIC_DENSITY
 static __device__ __host__ void print_atomic_density(const char* name,
                                                      Worklist wl) {
-#ifdef __CUDA_ARCH__
+#ifdef __HIP_DEVICE_COMPILE__
   assert(false);
 #else
   unsigned count[32 + 1];
-  CUDA_SAFE_CALL(cudaMemcpy(&count, wl.atomic_density,
+  CUDA_SAFE_CALL(hipMemcpy(&count, wl.atomic_density,
                             sizeof(unsigned int) * (32 + 1),
-                            cudaMemcpyDeviceToHost));
+                            hipMemcpyDeviceToHost));
 
   for (int i = 0; i < 32 + 1; i++) {
     fprintf(stderr, "INSTR atomic_density_%s_%d %u\n", name, i, count[i]);

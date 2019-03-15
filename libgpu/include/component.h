@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 /*
    component.h
 
@@ -48,8 +49,8 @@ void ComponentSpace::dump_to_file(const char* F) {
     mem = (unsigned*)calloc(nelements, sizeof(unsigned));
   }
 
-  assert(cudaMemcpy(mem, ele2comp, nelements * sizeof(unsigned),
-                    cudaMemcpyDeviceToHost) == cudaSuccess);
+  assert(hipMemcpy(mem, ele2comp, nelements * sizeof(unsigned),
+                    hipMemcpyDeviceToHost) == hipSuccess);
 
   int i;
   for (i = 0; i < nelements; i++) {
@@ -64,12 +65,12 @@ void ComponentSpace::dump_to_file(const char* F) {
 }
 
 void ComponentSpace::copy(ComponentSpace& two) {
-  assert(cudaMemcpy(two.ncomponents, ncomponents, sizeof(unsigned),
-                    cudaMemcpyDeviceToDevice) == 0);
-  assert(cudaMemcpy(two.ele2comp, ele2comp, sizeof(unsigned) * nelements,
-                    cudaMemcpyDeviceToDevice) == 0);
-  assert(cudaMemcpy(two.complen, complen, sizeof(unsigned) * nelements,
-                    cudaMemcpyDeviceToDevice) == 0);
+  assert(hipMemcpy(two.ncomponents, ncomponents, sizeof(unsigned),
+                    hipMemcpyDeviceToDevice) == 0);
+  assert(hipMemcpy(two.ele2comp, ele2comp, sizeof(unsigned) * nelements,
+                    hipMemcpyDeviceToDevice) == 0);
+  assert(hipMemcpy(two.complen, complen, sizeof(unsigned) * nelements,
+                    hipMemcpyDeviceToDevice) == 0);
 }
 __device__ void ComponentSpace::print1x1() {
   printf("\t\t-----------------\n");
@@ -79,21 +80,21 @@ __device__ void ComponentSpace::print1x1() {
   printf("\t\t-----------------\n");
 }
 __global__ void print1x1(ComponentSpace cs) { cs.print1x1(); }
-__host__ void ComponentSpace::print() { ::print1x1<<<1, 1>>>(*this); }
+__host__ void ComponentSpace::print() { ::hipLaunchKernelGGL((print1x1), dim3(1), dim3(1), 0, 0, *this); }
 __device__ unsigned ComponentSpace::numberOfElements() { return nelements; }
 __device__ unsigned ComponentSpace::numberOfComponents() {
   return *ncomponents;
 }
 unsigned ComponentSpace::numberOfComponentsHost() {
   unsigned hncomponents = 0;
-  check_cuda(cudaMemcpy(&hncomponents, ncomponents, sizeof(unsigned),
-                        cudaMemcpyDeviceToHost));
+  check_cuda(hipMemcpy(&hncomponents, ncomponents, sizeof(unsigned),
+                        hipMemcpyDeviceToHost));
   return hncomponents;
 }
 void ComponentSpace::allocate() {
-  check_cuda(cudaMalloc((void**)&ncomponents, 1 * sizeof(unsigned)));
-  check_cuda(cudaMalloc((void**)&complen, nelements * sizeof(unsigned)));
-  check_cuda(cudaMalloc((void**)&ele2comp, nelements * sizeof(unsigned)));
+  check_cuda(hipMalloc((void**)&ncomponents, 1 * sizeof(unsigned)));
+  check_cuda(hipMalloc((void**)&complen, nelements * sizeof(unsigned)));
+  check_cuda(hipMalloc((void**)&ele2comp, nelements * sizeof(unsigned)));
 }
 __global__ void dinitcs(unsigned nelements, unsigned* complen,
                         unsigned* ele2comp) {
@@ -108,10 +109,10 @@ void ComponentSpace::init() {
   // init the elements.
   unsigned blocksize = 256; ////
   unsigned nblocks   = (nelements + blocksize - 1) / blocksize;
-  dinitcs<<<nblocks, blocksize>>>(nelements, complen, ele2comp);
+  hipLaunchKernelGGL((dinitcs), dim3(nblocks), dim3(blocksize), 0, 0, nelements, complen, ele2comp);
   // init number of components.
-  check_cuda(cudaMemcpy(ncomponents, &nelements, sizeof(unsigned),
-                        cudaMemcpyHostToDevice));
+  check_cuda(hipMemcpy(ncomponents, &nelements, sizeof(unsigned),
+                        hipMemcpyHostToDevice));
 }
 __device__ bool ComponentSpace::isBoss(unsigned element) {
   return atomicCAS(&ele2comp[element], element, element) == element;

@@ -131,6 +131,7 @@ struct FirstItr_BFS {
       std::string impl_str(_graph.get_run_identifier("BFS_"));
       galois::StatTimer StatTimer_cuda(impl_str.c_str(), regionname);
       StatTimer_cuda.start();
+      printf("%u %u %p\n", __begin, __end, cuda_ctx);
       FirstItr_BFS_cuda(__begin, __end, cuda_ctx);
       StatTimer_cuda.stop();
     } else if (personality == CPU)

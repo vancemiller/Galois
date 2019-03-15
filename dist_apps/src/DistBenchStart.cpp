@@ -30,13 +30,8 @@
 // Command line args
 ////////////////////////////////////////////////////////////////////////////////
 
-cll::opt<int> numThreads("t", cll::desc("Number of threads (default 1)"),
-                              cll::init(1));
 cll::opt<int> numRuns("runs", cll::desc("Number of runs (default 3)"),
                                         cll::init(3));
-cll::opt<std::string> statFile("statFile",
-                               cll::desc("optional output file to print stats to"),
-                               cll::init(""));
 cll::opt<bool> verify("verify",
                       cll::desc("Verify results by outputting results "
                                 "to file (default false)"),

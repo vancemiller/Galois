@@ -45,7 +45,7 @@ void load_graph_CUDA(struct CUDA_Context* ctx, MarshalGraph &g, unsigned num_hos
 	size_t mem_usage = mem_usage_CUDA_common(g, num_hosts);
 	mem_usage += mem_usage_CUDA_field(&ctx->dist_current, g, num_hosts);
 	mem_usage += mem_usage_CUDA_field(&ctx->dist_old, g, num_hosts);
-	printf("[%d] Host memory for communication context: %3u MB\n", ctx->id, mem_usage/1048756);
+	printf("[%d] Host memory for communication context: %3lu MB\n", ctx->id, mem_usage/1048756);
 	load_graph_CUDA_common(ctx, g, num_hosts);
 	load_graph_CUDA_field(ctx, &ctx->dist_current, num_hosts);
 	load_graph_CUDA_field(ctx, &ctx->dist_old, num_hosts);

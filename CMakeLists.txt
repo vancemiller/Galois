@@ -27,7 +27,6 @@ set(ENABLE_DIST_GALOIS OFF CACHE BOOL "Enable distributed features")
 set(ENABLE_HETERO_GALOIS OFF CACHE BOOL "Enable heterogeneous features")
 set(USE_LCI OFF CACHE BOOL "Use LCI network runtime instead of MPI")
 set(USE_BARE_MPI OFF CACHE BOOL "Use MPI directly (no dedicated network-runtime thread)")
-set(CUDA_CAPABILITY "3.7,6.1" CACHE STRING "Comma-separated CUDA capability version numbers")
 ###### General features ######
 set(USE_GPROF OFF CACHE BOOL "Enable GCC profiling")
 set(USE_VTUNE OFF CACHE BOOL "Use VTune for profiling")
@@ -112,9 +111,9 @@ endif()
 if(CMAKE_COMPILER_IS_GNUCC)
   execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpversion
                   OUTPUT_VARIABLE GCC_VERSION)
-  if(GCC_VERSION VERSION_LESS 5.2)
-    message(FATAL_ERROR "GCC must be 5.2 or higher")
-  endif()
+                #if(GCC_VERSION VERSION_LESS 5.2)
+                #message(FATAL_ERROR "GCC must be 5.2 or higher")
+                #endif()
   #new debugging optimization level
   # if(CMAKE_BUILD_TYPE MATCHES "Debug")
     # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Og")
@@ -161,6 +160,8 @@ if(ENABLE_HETERO_GALOIS)
   set(ENABLE_DIST_GALOIS ON)
 endif()
 if(ENABLE_DIST_GALOIS)
+  set(MPI_HOME /usr/local)
+  set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${MPI_HOME})
   find_package(MPI REQUIRED) # required even if USE_LCI
   set(CMAKE_CXX_COMPILE_FLAGS ${CMAKE_CXX_COMPILE_FLAGS} ${MPI_COMPILE_FLAGS})
   set(CMAKE_CXX_LINK_FLAGS ${CMAKE_CXX_LINK_FLAGS} ${MPI_LINK_FLAGS})
@@ -179,26 +180,27 @@ if(ENABLE_DIST_GALOIS)
   endif(USE_LCI)
 
   if(ENABLE_HETERO_GALOIS)
-    find_package(CUDA REQUIRED)
-    set(CUDA_PROPAGATE_HOST_FLAGS off)
-    set(CUDA_SEPARABLE_COMPILATION on)
-    set(CUDA_HOST_COMPILER g++)
+    if(NOT DEFINED ROCM_HOME)
+      if(NOT DEFINED ENV{ROCM_HOME})
+        set(ROCM_HOME "/opt/rocm" CACHE PATH "Path to which ROCM has been installed")
+      else()
+        set(ROCM_HOME $ENV{HIP_PATH} CACHE PATH "Path to which ROCM has been installed")
+      endif()
+    endif()
+    set(HIP_PATH "${ROCM_HOME}/hip")
+    set(CMAKE_MODULE_PATH "${HIP_PATH}/cmake" ${CMAKE_MODULE_PATH})
+    find_package(HIP REQUIRED)
 
-    string(REPLACE "." "" GENCODES ${CUDA_CAPABILITY})
-    string(REPLACE "," ";" GENCODES ${GENCODES})
-    foreach(GENCODE ${GENCODES})
-      set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; -gencode arch=compute_${GENCODE},code=sm_${GENCODE})
-    endforeach()
-
-    cuda_include_directories("${CMAKE_SOURCE_DIR}/libgpu/include")
+    hip_include_directories("${CMAKE_SOURCE_DIR}/libgpu/include")
 
     # MGPU v1.1
     set(MGPU_ROOT "${CMAKE_SOURCE_DIR}/libgpu/moderngpu") # only required headers
-    cuda_include_directories("${MGPU_ROOT}/include")
+    hip_include_directories("${MGPU_ROOT}/include")
 
     # CUB v1.6.4
-    set(CUB_ROOT "${CMAKE_SOURCE_DIR}/libgpu/cub") # only required headers
-    cuda_include_directories("${CUB_ROOT}")
+    set(CUB_ROOT "${CMAKE_SOURCE_DIR}/libgpu/cub-hip") # only required headers
+    hip_include_directories("${CUB_ROOT}" "${CUB_ROOT}/external/Thrust/")
+    set(HIP_HIPCC_FLAGS "${HIP_HIPCC_FLAGS} -Wno-deprecated-declarations")
 
     #find_package(OpenCL REQUIRED)
   endif(ENABLE_HETERO_GALOIS)
@@ -224,7 +226,7 @@ if(USE_EXP)
   if(TBB_FOUND)
     include_directories(${TBB_INCLUDE_DIRS})
   endif()
-  
+
   find_package(CBLAS)
   if(CBLAS_FOUND)
     include_directories(${BLAS_INCLUDE_DIRS})
@@ -306,7 +308,7 @@ set(Boost_USE_MULTITHREADED OFF)
 if(NOT "$ENV{BOOST_DIR}" STREQUAL "")
   set(BOOST_ROOT $ENV{BOOST_DIR})
 endif()
-find_package(Boost 1.58.0 REQUIRED COMPONENTS serialization)
+find_package(Boost 1.58.0 REQUIRED COMPONENTS serialization iostreams)
 include_directories(${Boost_INCLUDE_DIR})
 add_definitions(-DBOOST_NO_AUTO_PTR)
 
@@ -444,7 +446,7 @@ function(makeTest)
     linkApp(test-${name} "")
 
     list(APPEND commandline "$<TARGET_FILE:test-${name}>")
-  elseif(${APP_TARGET}) 
+  elseif(${APP_TARGET})
     get_filename_component(base ${name} NAME)
     if(TARGET ${base})
       list(APPEND commandline "$<TARGET_FILE:${base}>")
@@ -455,7 +457,7 @@ function(makeTest)
   else()
     list(APPEND commandline ${name})
   endif()
-  
+
   foreach(f ${APP_UNPARSED_ARGUMENTS})
     list(APPEND commandline ${f})
   endforeach()

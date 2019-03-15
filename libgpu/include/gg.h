@@ -15,6 +15,7 @@
 #ifndef GALOIS_GPU
 #define GALOIS_GPU
 
+#include <hip/hip_runtime.h>
 #include <fstream>
 #include <stdint.h>
 #include <sys/mman.h>
@@ -35,10 +36,10 @@ unsigned const debug = GGDEBUG;
 
 #include "Timer.h"
 
-static void check_cuda_error(const cudaError_t e, const char* file,
+static void check_cuda_error(const hipError_t e, const char* file,
                              const int line) {
-  if (e != cudaSuccess) {
-    fprintf(stderr, "%s:%d: %s (%d)\n", file, line, cudaGetErrorString(e), e);
+  if (e != hipSuccess) {
+    fprintf(stderr, "%s:%d: %s (%d)\n", file, line, hipGetErrorString(e), e);
     exit(1);
   }
 }

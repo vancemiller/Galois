@@ -60,21 +60,21 @@ struct CUDA_Context_Field {
 };
 
 bool init_CUDA_context_common(struct CUDA_Context_Common* ctx, int device) {
-  struct cudaDeviceProp dev;
+  struct hipDeviceProp_t dev;
   if (device == -1) {
-    check_cuda(cudaGetDevice(&device));
+    check_cuda(hipGetDevice(&device));
   } else {
     int count;
-    check_cuda(cudaGetDeviceCount(&count));
+    check_cuda(hipGetDeviceCount(&count));
     if (device > count) {
       fprintf(stderr, "Error: Out-of-range GPU %d specified (%d total GPUs)",
               device, count);
       return false;
     }
-    check_cuda(cudaSetDevice(device));
+    check_cuda(hipSetDevice(device));
   }
   ctx->device = device;
-  check_cuda(cudaGetDeviceProperties(&dev, device));
+  check_cuda(hipGetDeviceProperties(&dev, device));
   printf("[%d] Using GPU %d: %s\n", ctx->id, device, dev.name);
   return true;
 }
@@ -91,7 +91,7 @@ void load_graph_CUDA_common(struct CUDA_Context_Common* ctx, MarshalGraph& g,
                      (g.nnodes) * sizeof(node_data_type);
   if (!g.edge_data)
     mem_usage += (g.nedges) * sizeof(edge_data_type);
-  printf("[%d] Host memory for graph: %3u MB\n", ctx->id, mem_usage / 1048756);
+  printf("[%d] Host memory for graph: %3lu MB\n", ctx->id, mem_usage / 1048756);
 
   // copy the graph to the GPU
   graph.nnodes    = g.nnodes;

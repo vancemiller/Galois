@@ -18,7 +18,7 @@
 // timeblocks 2.0
 
 const int MAGIC = 0x5a5e5a61; // random
-
+/*
 // from http://forums.nvidia.com/index.php?showtopic=186669
 static __device__ uint get_smid_reg(void) {
   uint ret;
@@ -61,10 +61,10 @@ public:
     tcounts[tid] = count;
   }
 };
-
+*/
 class Counter {
 public:
-  GPUCounter gc;
+  //GPUCounter gc;
   FILE* f;
   Shared<unsigned> tvalues;
   Shared<unsigned> tcounts;
@@ -77,15 +77,8 @@ public:
 
   int get_residency(int tpb, int dynsmem) {
     int res;
-
-#if CUDA_VERSION < 6050
-    assert(dynsmem == 0);
-    cub::MaxSmOccupancy(res, function, tpb);
-#else
-    assert(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
-               &res, function, tpb, dynsmem) == cudaSuccess);
-#endif
-
+    assert(hipOccupancyMaxActiveBlocksPerMultiprocessor(
+               &res, function, tpb, dynsmem) == hipSuccess);
     return res;
   }
 
@@ -115,20 +108,21 @@ public:
     smids.alloc(blocks);
     start.alloc(threads);
 
-    gc.tvalues = tvalues.gpu_wr_ptr();
+    /*gc.tvalues = tvalues.gpu_wr_ptr();
     gc.tcounts = tcounts.gpu_wr_ptr();
     gc.smids   = smids.gpu_wr_ptr();
     gc.start   = start.gpu_wr_ptr();
+    */
   }
 
-  __host__ GPUCounter& get_gpu() {
+  /*__host__ GPUCounter& get_gpu() {
     tvalues.gpu_wr_ptr();
     tcounts.gpu_wr_ptr();
     smids.gpu_wr_ptr();
     start.gpu_wr_ptr();
 
     return gc;
-  }
+  }*/
 
   __host__ void write_data(int iteration, unsigned work, int iblocks = 0,
                            int ithreads = 0, int idynsmem = -1) {

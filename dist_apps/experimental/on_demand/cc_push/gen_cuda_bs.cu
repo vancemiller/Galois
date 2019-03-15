@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 /*
  * This file belongs to the Galois project, a C++ library for exploiting parallelism.
  * The code is being released under the terms of the 3-Clause BSD License (a
@@ -535,7 +536,7 @@ void InitializeGraph_cuda(unsigned int  __begin, unsigned int  __end, struct CUD
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  InitializeGraph <<<blocks, threads>>>(ctx->gg, __begin, __end, ctx->comp_current.data.gpu_wr_ptr(), ctx->comp_old.data.gpu_wr_ptr());
+  hipLaunchKernelGGL((InitializeGraph), dim3(blocks), dim3(threads), 0, 0, ctx->gg, __begin, __end, ctx->comp_current.data.gpu_wr_ptr(), ctx->comp_old.data.gpu_wr_ptr());
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;
@@ -567,7 +568,7 @@ void FirstItr_ConnectedComp_cuda(unsigned int  __begin, unsigned int  __end, str
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  FirstItr_ConnectedComp <<<blocks, __tb_FirstItr_ConnectedComp>>>(ctx->gg, __begin, __end, ctx->comp_current.data.gpu_wr_ptr(), ctx->comp_old.data.gpu_wr_ptr(), *(ctx->comp_current.is_updated.gpu_rd_ptr()));
+  hipLaunchKernelGGL((FirstItr_ConnectedComp), dim3(blocks), dim3(__tb_FirstItr_ConnectedComp), 0, 0, ctx->gg, __begin, __end, ctx->comp_current.data.gpu_wr_ptr(), ctx->comp_old.data.gpu_wr_ptr(), *(ctx->comp_current.is_updated.gpu_rd_ptr()));
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;
@@ -607,7 +608,7 @@ void ConnectedComp_cuda(unsigned int  __begin, unsigned int  __end, unsigned int
   // FP: "7 -> 8;
   _DGAccumulator_accum.rv = DGAccumulator_accumval.gpu_wr_ptr();
   // FP: "8 -> 9;
-  ConnectedComp <<<blocks, __tb_ConnectedComp>>>(ctx->gg, __begin, __end, ctx->comp_current.data.gpu_wr_ptr(), ctx->comp_old.data.gpu_wr_ptr(), *(ctx->comp_current.is_updated.gpu_rd_ptr()), _DGAccumulator_accum);
+  hipLaunchKernelGGL((ConnectedComp), dim3(blocks), dim3(__tb_ConnectedComp), 0, 0, ctx->gg, __begin, __end, ctx->comp_current.data.gpu_wr_ptr(), ctx->comp_old.data.gpu_wr_ptr(), *(ctx->comp_current.is_updated.gpu_rd_ptr()), _DGAccumulator_accum);
   // FP: "9 -> 10;
   check_cuda_kernel;
   // FP: "10 -> 11;
@@ -649,7 +650,7 @@ void ConnectedCompSanityCheck_cuda(unsigned int  __begin, unsigned int  __end, u
   // FP: "7 -> 8;
   _DGAccumulator_accum.rv = DGAccumulator_accumval.gpu_wr_ptr();
   // FP: "8 -> 9;
-  ConnectedCompSanityCheck <<<blocks, threads>>>(ctx->gg, __begin, __end, ctx->comp_current.data.gpu_wr_ptr(), _DGAccumulator_accum);
+  hipLaunchKernelGGL((ConnectedCompSanityCheck), dim3(blocks), dim3(threads), 0, 0, ctx->gg, __begin, __end, ctx->comp_current.data.gpu_wr_ptr(), _DGAccumulator_accum);
   // FP: "9 -> 10;
   check_cuda_kernel;
   // FP: "10 -> 11;

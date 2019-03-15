@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 /*
  * This file belongs to the Galois project, a C++ library for exploiting parallelism.
  * The code is being released under the terms of the 3-Clause BSD License (a
@@ -258,7 +259,7 @@ void InitializeGraph_cuda(unsigned int  __begin, unsigned int  __end, const uint
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  InitializeGraph <<<blocks, threads>>>(ctx->gg, ctx->numNodesWithEdges, __begin, __end, local_infinity, local_src_node, ctx->dist_current.data.gpu_wr_ptr());
+  hipLaunchKernelGGL((InitializeGraph), dim3(blocks), dim3(threads), 0, 0, ctx->gg, ctx->numNodesWithEdges, __begin, __end, local_infinity, local_src_node, ctx->dist_current.data.gpu_wr_ptr());
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;
@@ -282,7 +283,7 @@ void BFS_cuda(unsigned int  __begin, unsigned int  __end, int & __retval, struct
   HGAccumulator<int> _rv;
   *(retval.cpu_wr_ptr()) = 0;
   _rv.rv = retval.gpu_wr_ptr();
-  BFS <<<blocks, __tb_BFS>>>(ctx->gg, ctx->numNodesWithEdges, __begin, __end, ctx->dist_current.data.gpu_wr_ptr(), _rv);
+  hipLaunchKernelGGL((BFS), dim3(blocks), dim3(__tb_BFS), 0, 0, ctx->gg, ctx->numNodesWithEdges, __begin, __end, ctx->dist_current.data.gpu_wr_ptr(), _rv);
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;
@@ -308,7 +309,7 @@ void BFSSanityCheck_cuda(unsigned int & sum, unsigned int & max, const uint32_t 
   HGReduceMax<unsigned int> _max;
   *(maxval.cpu_wr_ptr()) = 0;
   _max.rv = maxval.gpu_wr_ptr();
-  BFSSanityCheck <<<blocks, __tb_BFS>>>(ctx->gg, ctx->beginMaster, ctx->beginMaster+ctx->numOwned, local_infinity, ctx->dist_current.data.gpu_rd_ptr(), _sum, _max);
+  hipLaunchKernelGGL((BFSSanityCheck), dim3(blocks), dim3(__tb_BFS), 0, 0, ctx->gg, ctx->beginMaster, ctx->beginMaster+ctx->numOwned, local_infinity, ctx->dist_current.data.gpu_rd_ptr(), _sum, _max);
   check_cuda_kernel;
   sum = *(sumval.cpu_rd_ptr());
   max = *(maxval.cpu_rd_ptr());

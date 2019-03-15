@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 /*
  * This file belongs to the Galois project, a C++ library for exploiting parallelism.
  * The code is being released under the terms of the 3-Clause BSD License (a
@@ -1492,7 +1493,7 @@ void InitializeGraph_cuda(unsigned int  __begin, unsigned int  __end, struct CUD
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  InitializeGraph <<<blocks, threads>>>(ctx->gg, __begin, __end, ctx->betweeness_centrality.data.gpu_wr_ptr(), ctx->dependency.data.gpu_wr_ptr(), ctx->num_predecessors.data.gpu_wr_ptr(), ctx->num_shortest_paths.data.gpu_wr_ptr(), ctx->num_successors.data.gpu_wr_ptr(), ctx->propagation_flag.data.gpu_wr_ptr(), ctx->to_add.data.gpu_wr_ptr(), ctx->to_add_float.data.gpu_wr_ptr(), ctx->trim.data.gpu_wr_ptr());
+  hipLaunchKernelGGL((InitializeGraph), dim3(blocks), dim3(threads), 0, 0, ctx->gg, __begin, __end, ctx->betweeness_centrality.data.gpu_wr_ptr(), ctx->dependency.data.gpu_wr_ptr(), ctx->num_predecessors.data.gpu_wr_ptr(), ctx->num_shortest_paths.data.gpu_wr_ptr(), ctx->num_successors.data.gpu_wr_ptr(), ctx->propagation_flag.data.gpu_wr_ptr(), ctx->to_add.data.gpu_wr_ptr(), ctx->to_add_float.data.gpu_wr_ptr(), ctx->trim.data.gpu_wr_ptr());
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;
@@ -1524,7 +1525,7 @@ void InitializeIteration_cuda(unsigned int  __begin, unsigned int  __end, const 
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  InitializeIteration <<<blocks, threads>>>(ctx->gg, __begin, __end, local_current_src_node, local_infinity, ctx->current_length.data.gpu_wr_ptr(), ctx->dependency.data.gpu_wr_ptr(), ctx->num_predecessors.data.gpu_wr_ptr(), ctx->num_shortest_paths.data.gpu_wr_ptr(), ctx->num_successors.data.gpu_wr_ptr(), ctx->old_length.data.gpu_wr_ptr(), ctx->propagation_flag.data.gpu_wr_ptr());
+  hipLaunchKernelGGL((InitializeIteration), dim3(blocks), dim3(threads), 0, 0, ctx->gg, __begin, __end, local_current_src_node, local_infinity, ctx->current_length.data.gpu_wr_ptr(), ctx->dependency.data.gpu_wr_ptr(), ctx->num_predecessors.data.gpu_wr_ptr(), ctx->num_shortest_paths.data.gpu_wr_ptr(), ctx->num_successors.data.gpu_wr_ptr(), ctx->old_length.data.gpu_wr_ptr(), ctx->propagation_flag.data.gpu_wr_ptr());
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;
@@ -1556,7 +1557,7 @@ void FirstIterationSSSP_cuda(unsigned int  __begin, unsigned int  __end, struct 
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  FirstIterationSSSP <<<blocks, __tb_FirstIterationSSSP>>>(ctx->gg, __begin, __end, ctx->current_length.data.gpu_wr_ptr());
+  hipLaunchKernelGGL((FirstIterationSSSP), dim3(blocks), dim3(__tb_FirstIterationSSSP), 0, 0, ctx->gg, __begin, __end, ctx->current_length.data.gpu_wr_ptr());
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;
@@ -1596,7 +1597,7 @@ void SSSP_cuda(unsigned int  __begin, unsigned int  __end, uint32_t & DGAccumula
   // FP: "7 -> 8;
   _DGAccumulator_accum.rv = DGAccumulator_accumval.gpu_wr_ptr();
   // FP: "8 -> 9;
-  SSSP <<<blocks, __tb_SSSP>>>(ctx->gg, __begin, __end, ctx->current_length.data.gpu_wr_ptr(), ctx->old_length.data.gpu_wr_ptr(), _DGAccumulator_accum);
+  hipLaunchKernelGGL((SSSP), dim3(blocks), dim3(__tb_SSSP), 0, 0, ctx->gg, __begin, __end, ctx->current_length.data.gpu_wr_ptr(), ctx->old_length.data.gpu_wr_ptr(), _DGAccumulator_accum);
   // FP: "9 -> 10;
   check_cuda_kernel;
   // FP: "10 -> 11;
@@ -1630,7 +1631,7 @@ void PredAndSucc_cuda(unsigned int  __begin, unsigned int  __end, const uint32_t
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  PredAndSucc <<<blocks, __tb_PredAndSucc>>>(ctx->gg, __begin, __end, local_infinity, ctx->current_length.data.gpu_wr_ptr(), ctx->num_predecessors.data.gpu_wr_ptr(), ctx->num_successors.data.gpu_wr_ptr());
+  hipLaunchKernelGGL((PredAndSucc), dim3(blocks), dim3(__tb_PredAndSucc), 0, 0, ctx->gg, __begin, __end, local_infinity, ctx->current_length.data.gpu_wr_ptr(), ctx->num_predecessors.data.gpu_wr_ptr(), ctx->num_successors.data.gpu_wr_ptr());
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;
@@ -1662,7 +1663,7 @@ void NumShortestPathsChanges_cuda(unsigned int  __begin, unsigned int  __end, co
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  NumShortestPathsChanges <<<blocks, threads>>>(ctx->gg, __begin, __end, local_infinity, ctx->current_length.data.gpu_wr_ptr(), ctx->num_predecessors.data.gpu_wr_ptr(), ctx->num_shortest_paths.data.gpu_wr_ptr(), ctx->propagation_flag.data.gpu_wr_ptr(), ctx->to_add.data.gpu_wr_ptr(), ctx->trim.data.gpu_wr_ptr());
+  hipLaunchKernelGGL((NumShortestPathsChanges), dim3(blocks), dim3(threads), 0, 0, ctx->gg, __begin, __end, local_infinity, ctx->current_length.data.gpu_wr_ptr(), ctx->num_predecessors.data.gpu_wr_ptr(), ctx->num_shortest_paths.data.gpu_wr_ptr(), ctx->propagation_flag.data.gpu_wr_ptr(), ctx->to_add.data.gpu_wr_ptr(), ctx->trim.data.gpu_wr_ptr());
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;
@@ -1702,7 +1703,7 @@ void NumShortestPaths_cuda(unsigned int  __begin, unsigned int  __end, uint32_t 
   // FP: "7 -> 8;
   _DGAccumulator_accum.rv = DGAccumulator_accumval.gpu_wr_ptr();
   // FP: "8 -> 9;
-  NumShortestPaths <<<blocks, __tb_NumShortestPaths>>>(ctx->gg, __begin, __end, local_infinity, ctx->current_length.data.gpu_wr_ptr(), ctx->num_shortest_paths.data.gpu_wr_ptr(), ctx->propagation_flag.data.gpu_wr_ptr(), ctx->to_add.data.gpu_wr_ptr(), ctx->trim.data.gpu_wr_ptr(), _DGAccumulator_accum);
+  hipLaunchKernelGGL((NumShortestPaths), dim3(blocks), dim3(__tb_NumShortestPaths), 0, 0, ctx->gg, __begin, __end, local_infinity, ctx->current_length.data.gpu_wr_ptr(), ctx->num_shortest_paths.data.gpu_wr_ptr(), ctx->propagation_flag.data.gpu_wr_ptr(), ctx->to_add.data.gpu_wr_ptr(), ctx->trim.data.gpu_wr_ptr(), _DGAccumulator_accum);
   // FP: "9 -> 10;
   check_cuda_kernel;
   // FP: "10 -> 11;
@@ -1736,7 +1737,7 @@ void PropagationFlagUpdate_cuda(unsigned int  __begin, unsigned int  __end, cons
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  PropagationFlagUpdate <<<blocks, threads>>>(ctx->gg, __begin, __end, local_infinity, ctx->current_length.data.gpu_wr_ptr(), ctx->num_successors.data.gpu_wr_ptr(), ctx->propagation_flag.data.gpu_wr_ptr());
+  hipLaunchKernelGGL((PropagationFlagUpdate), dim3(blocks), dim3(threads), 0, 0, ctx->gg, __begin, __end, local_infinity, ctx->current_length.data.gpu_wr_ptr(), ctx->num_successors.data.gpu_wr_ptr(), ctx->propagation_flag.data.gpu_wr_ptr());
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;
@@ -1768,7 +1769,7 @@ void DependencyPropChanges_cuda(unsigned int  __begin, unsigned int  __end, cons
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  DependencyPropChanges <<<blocks, threads>>>(ctx->gg, __begin, __end, local_infinity, ctx->current_length.data.gpu_wr_ptr(), ctx->dependency.data.gpu_wr_ptr(), ctx->num_successors.data.gpu_wr_ptr(), ctx->propagation_flag.data.gpu_wr_ptr(), ctx->to_add_float.data.gpu_wr_ptr(), ctx->trim.data.gpu_wr_ptr());
+  hipLaunchKernelGGL((DependencyPropChanges), dim3(blocks), dim3(threads), 0, 0, ctx->gg, __begin, __end, local_infinity, ctx->current_length.data.gpu_wr_ptr(), ctx->dependency.data.gpu_wr_ptr(), ctx->num_successors.data.gpu_wr_ptr(), ctx->propagation_flag.data.gpu_wr_ptr(), ctx->to_add_float.data.gpu_wr_ptr(), ctx->trim.data.gpu_wr_ptr());
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;
@@ -1808,7 +1809,7 @@ void DependencyPropagation_cuda(unsigned int  __begin, unsigned int  __end, uint
   // FP: "7 -> 8;
   _DGAccumulator_accum.rv = DGAccumulator_accumval.gpu_wr_ptr();
   // FP: "8 -> 9;
-  DependencyPropagation <<<blocks, __tb_DependencyPropagation>>>(ctx->gg, __begin, __end, local_current_src_node, local_infinity, ctx->current_length.data.gpu_wr_ptr(), ctx->dependency.data.gpu_wr_ptr(), ctx->num_shortest_paths.data.gpu_wr_ptr(), ctx->num_successors.data.gpu_wr_ptr(), ctx->propagation_flag.data.gpu_wr_ptr(), ctx->to_add_float.data.gpu_wr_ptr(), ctx->trim.data.gpu_wr_ptr(), _DGAccumulator_accum);
+  hipLaunchKernelGGL((DependencyPropagation), dim3(blocks), dim3(__tb_DependencyPropagation), 0, 0, ctx->gg, __begin, __end, local_current_src_node, local_infinity, ctx->current_length.data.gpu_wr_ptr(), ctx->dependency.data.gpu_wr_ptr(), ctx->num_shortest_paths.data.gpu_wr_ptr(), ctx->num_successors.data.gpu_wr_ptr(), ctx->propagation_flag.data.gpu_wr_ptr(), ctx->to_add_float.data.gpu_wr_ptr(), ctx->trim.data.gpu_wr_ptr(), _DGAccumulator_accum);
   // FP: "9 -> 10;
   check_cuda_kernel;
   // FP: "10 -> 11;
@@ -1842,7 +1843,7 @@ void BC_cuda(unsigned int  __begin, unsigned int  __end, struct CUDA_Context*  c
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  BC <<<blocks, threads>>>(ctx->gg, __begin, __end, ctx->betweeness_centrality.data.gpu_wr_ptr(), ctx->dependency.data.gpu_wr_ptr());
+  hipLaunchKernelGGL((BC), dim3(blocks), dim3(threads), 0, 0, ctx->gg, __begin, __end, ctx->betweeness_centrality.data.gpu_wr_ptr(), ctx->dependency.data.gpu_wr_ptr());
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;
@@ -1898,7 +1899,7 @@ void Sanity_cuda(unsigned int  __begin, unsigned int  __end, float & DGAccumulat
   // FP: "15 -> 16;
   _DGAccumulator_min.rv = DGAccumulator_minval.gpu_wr_ptr();
   // FP: "16 -> 17;
-  Sanity <<<blocks, threads>>>(ctx->gg, __begin, __end, ctx->betweeness_centrality.data.gpu_wr_ptr(), _DGAccumulator_sum, _DGAccumulator_max, _DGAccumulator_min);
+  hipLaunchKernelGGL((Sanity), dim3(blocks), dim3(threads), 0, 0, ctx->gg, __begin, __end, ctx->betweeness_centrality.data.gpu_wr_ptr(), _DGAccumulator_sum, _DGAccumulator_max, _DGAccumulator_min);
   // FP: "17 -> 18;
   check_cuda_kernel;
   // FP: "18 -> 19;

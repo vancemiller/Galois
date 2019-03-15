@@ -53,7 +53,7 @@ public:
 
   ~DynamicBitset() {
     if (bit_vector != NULL)
-      cudaFree(bit_vector);
+      hipFree(bit_vector);
   }
 
   void alloc(size_t nbits) {
@@ -62,8 +62,7 @@ public:
     assert(sizeof(uint64_t) * 8 == 64);
     num_bits_capacity = nbits;
     num_bits          = nbits;
-    CUDA_SAFE_CALL(cudaMalloc(&bit_vector, vec_size() * sizeof(uint64_t)));
-    reset();
+    CUDA_SAFE_CALL(hipMalloc(&bit_vector, vec_size() * sizeof(uint64_t)));
   }
 
   void resize(size_t nbits) {
@@ -83,7 +82,8 @@ public:
   }
 
   void reset() {
-    CUDA_SAFE_CALL(cudaMemset(bit_vector, 0, vec_size() * sizeof(uint64_t)));
+    if (vec_size())
+      CUDA_SAFE_CALL(hipMemset(bit_vector, 0, vec_size() * sizeof(uint64_t)));
   }
 
   // assumes bit_vector is not updated (set) in parallel
@@ -117,16 +117,16 @@ public:
 
   void copy_to_cpu(uint64_t* bit_vector_cpu_copy) {
     assert(bit_vector_cpu_copy != NULL);
-    CUDA_SAFE_CALL(cudaMemcpy(bit_vector_cpu_copy, bit_vector,
+    CUDA_SAFE_CALL(hipMemcpy(bit_vector_cpu_copy, bit_vector,
                               vec_size() * sizeof(uint64_t),
-                              cudaMemcpyDeviceToHost));
+                              hipMemcpyDeviceToHost));
   }
 
   void copy_to_gpu(uint64_t* cpu_bit_vector) {
     assert(cpu_bit_vector != NULL);
-    CUDA_SAFE_CALL(cudaMemcpy(bit_vector, cpu_bit_vector,
+    CUDA_SAFE_CALL(hipMemcpy(bit_vector, cpu_bit_vector,
                               vec_size() * sizeof(uint64_t),
-                              cudaMemcpyHostToDevice));
+                              hipMemcpyHostToDevice));
   }
 };
 

@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 /*
  * This file belongs to the Galois project, a C++ library for exploiting parallelism.
  * The code is being released under the terms of the 3-Clause BSD License (a
@@ -28,7 +29,7 @@ const char *GGC_OPTIONS = "coop_conv=False $ outline_iterate_gb=False $ backoff_
 #include "kcore_push_cuda.cuh"
 static const int __tb_InitializeGraph2 = TB_SIZE;
 static const int __tb_KCoreStep1 = TB_SIZE;
-__global__ void InitializeGraph2(CSRGraph graph, unsigned int __begin, unsigned int __end, uint32_t * p_current_degree, DynamicBitset& bitset_current_degree)
+__global__ void InitializeGraph2(CSRGraph graph, unsigned int __begin, unsigned int __end, uint32_t * p_current_degree, DynamicBitset * bitset_current_degree)
 {
   unsigned tid = TID_1D;
   unsigned nthreads = TOTAL_THREADS_1D;
@@ -125,7 +126,7 @@ __global__ void InitializeGraph2(CSRGraph graph, unsigned int __begin, unsigned 
         nps.tb.owner = MAX_TB_SIZE + 1;
       }
       // FP: "42 -> 43;
-      assert(nps.tb.src < __kernel_tb_size);
+      //assert(nps.tb.src < __kernel_tb_size);
       // FP: "43 -> 44;
       for (int _np_j = threadIdx.x; _np_j < ne; _np_j += BLKSIZE)
       {
@@ -135,7 +136,7 @@ __global__ void InitializeGraph2(CSRGraph graph, unsigned int __begin, unsigned 
           index_type dest_node;
           dest_node = graph.getAbsDestination(current_edge);
           atomicTestAdd(&p_current_degree[dest_node], (uint32_t)1);
-          bitset_current_degree.set(dest_node);
+          bitset_current_degree->set(dest_node);
         }
       }
       // FP: "51 -> 52;
@@ -165,7 +166,7 @@ __global__ void InitializeGraph2(CSRGraph graph, unsigned int __begin, unsigned 
         }
         index_type _np_w_start = nps.warp.start[warpid];
         index_type _np_w_size = nps.warp.size[warpid];
-        assert(nps.warp.src[warpid] < __kernel_tb_size);
+        //assert(nps.warp.src[warpid] < __kernel_tb_size);
         for (int _np_ii = _np_laneid; _np_ii < _np_w_size; _np_ii += 32)
         {
           index_type current_edge;
@@ -174,7 +175,7 @@ __global__ void InitializeGraph2(CSRGraph graph, unsigned int __begin, unsigned 
             index_type dest_node;
             dest_node = graph.getAbsDestination(current_edge);
             atomicTestAdd(&p_current_degree[dest_node], (uint32_t)1);
-            bitset_current_degree.set(dest_node);
+            bitset_current_degree->set(dest_node);
           }
         }
       }
@@ -203,13 +204,13 @@ __global__ void InitializeGraph2(CSRGraph graph, unsigned int __begin, unsigned 
       for (_np_i = threadIdx.x; _np_i < ITSIZE && _np.valid(_np_i); _np_i += BLKSIZE)
       {
         index_type current_edge;
-        assert(nps.fg.src[_np_i] < __kernel_tb_size);
+        //assert(nps.fg.src[_np_i] < __kernel_tb_size);
         current_edge= nps.fg.itvalue[_np_i];
         {
           index_type dest_node;
           dest_node = graph.getAbsDestination(current_edge);
           atomicTestAdd(&p_current_degree[dest_node], (uint32_t)1);
-          bitset_current_degree.set(dest_node);
+          bitset_current_degree->set(dest_node);
         }
       }
       // FP: "92 -> 93;
@@ -218,7 +219,7 @@ __global__ void InitializeGraph2(CSRGraph graph, unsigned int __begin, unsigned 
       __syncthreads();
     }
     // FP: "95 -> 96;
-    assert(threadIdx.x < __kernel_tb_size);
+    //assert(threadIdx.x < __kernel_tb_size);
   }
   // FP: "97 -> 98;
 }
@@ -269,7 +270,7 @@ __global__ void KCoreStep2(CSRGraph graph, unsigned int __begin, unsigned int __
   }
   // FP: "12 -> 13;
 }
-__global__ void KCoreStep1(CSRGraph graph, unsigned int __begin, unsigned int __end, uint32_t local_k_core_num, uint32_t * p_current_degree, uint8_t * p_flag, uint32_t * p_trim, DynamicBitset& bitset_trim, HGAccumulator<unsigned int> DGAccumulator_accum)
+__global__ void KCoreStep1(CSRGraph graph, unsigned int __begin, unsigned int __end, uint32_t local_k_core_num, uint32_t * p_current_degree, uint8_t * p_flag, uint32_t * p_trim, DynamicBitset * bitset_trim, HGAccumulator<unsigned int> DGAccumulator_accum)
 {
   unsigned tid = TID_1D;
   unsigned nthreads = TOTAL_THREADS_1D;
@@ -386,7 +387,7 @@ __global__ void KCoreStep1(CSRGraph graph, unsigned int __begin, unsigned int __
         nps.tb.owner = MAX_TB_SIZE + 1;
       }
       // FP: "50 -> 51;
-      assert(nps.tb.src < __kernel_tb_size);
+      //assert(nps.tb.src < __kernel_tb_size);
       // FP: "51 -> 52;
       for (int _np_j = threadIdx.x; _np_j < ne; _np_j += BLKSIZE)
       {
@@ -396,7 +397,7 @@ __global__ void KCoreStep1(CSRGraph graph, unsigned int __begin, unsigned int __
           index_type dst;
           dst = graph.getAbsDestination(current_edge);
           atomicTestAdd(&p_trim[dst], (uint32_t)1);
-          bitset_trim.set(dst);
+          bitset_trim->set(dst);
         }
       }
       // FP: "59 -> 60;
@@ -426,7 +427,7 @@ __global__ void KCoreStep1(CSRGraph graph, unsigned int __begin, unsigned int __
         }
         index_type _np_w_start = nps.warp.start[warpid];
         index_type _np_w_size = nps.warp.size[warpid];
-        assert(nps.warp.src[warpid] < __kernel_tb_size);
+        //assert(nps.warp.src[warpid] < __kernel_tb_size);
         for (int _np_ii = _np_laneid; _np_ii < _np_w_size; _np_ii += 32)
         {
           index_type current_edge;
@@ -435,7 +436,7 @@ __global__ void KCoreStep1(CSRGraph graph, unsigned int __begin, unsigned int __
             index_type dst;
             dst = graph.getAbsDestination(current_edge);
             atomicTestAdd(&p_trim[dst], (uint32_t)1);
-            bitset_trim.set(dst);
+            bitset_trim->set(dst);
           }
         }
       }
@@ -464,13 +465,13 @@ __global__ void KCoreStep1(CSRGraph graph, unsigned int __begin, unsigned int __
       for (_np_i = threadIdx.x; _np_i < ITSIZE && _np.valid(_np_i); _np_i += BLKSIZE)
       {
         index_type current_edge;
-        assert(nps.fg.src[_np_i] < __kernel_tb_size);
+        //assert(nps.fg.src[_np_i] < __kernel_tb_size);
         current_edge= nps.fg.itvalue[_np_i];
         {
           index_type dst;
           dst = graph.getAbsDestination(current_edge);
           atomicTestAdd(&p_trim[dst], (uint32_t)1);
-          bitset_trim.set(dst);
+          bitset_trim->set(dst);
         }
       }
       // FP: "100 -> 101;
@@ -479,7 +480,7 @@ __global__ void KCoreStep1(CSRGraph graph, unsigned int __begin, unsigned int __
       __syncthreads();
     }
     // FP: "103 -> 104;
-    assert(threadIdx.x < __kernel_tb_size);
+    //assert(threadIdx.x < __kernel_tb_size);
   }
   // FP: "107 -> 108;
   DGAccumulator_accum.thread_exit<cub::BlockReduce<unsigned int, TB_SIZE> >(DGAccumulator_accum_ts);
@@ -522,7 +523,7 @@ void InitializeGraph2_cuda(unsigned int  __begin, unsigned int  __end, struct CU
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  InitializeGraph2 <<<blocks, __tb_InitializeGraph2>>>(ctx->gg, __begin, __end, ctx->current_degree.data.gpu_wr_ptr(), *(ctx->current_degree.is_updated.gpu_rd_ptr()));
+  hipLaunchKernelGGL((InitializeGraph2), dim3(blocks), dim3(__tb_InitializeGraph2), 0, 0, ctx->gg, __begin, __end, ctx->current_degree.data.gpu_wr_ptr(), (ctx->current_degree.is_updated.gpu_rd_ptr()));
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;
@@ -554,7 +555,7 @@ void InitializeGraph1_cuda(unsigned int  __begin, unsigned int  __end, struct CU
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  InitializeGraph1 <<<blocks, threads>>>(ctx->gg, __begin, __end, ctx->current_degree.data.gpu_wr_ptr(), ctx->flag.data.gpu_wr_ptr(), ctx->trim.data.gpu_wr_ptr());
+  hipLaunchKernelGGL((InitializeGraph1), dim3(blocks), dim3(threads), 0, 0, ctx->gg, __begin, __end, ctx->current_degree.data.gpu_wr_ptr(), ctx->flag.data.gpu_wr_ptr(), ctx->trim.data.gpu_wr_ptr());
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;
@@ -586,7 +587,7 @@ void KCoreStep2_cuda(unsigned int  __begin, unsigned int  __end, struct CUDA_Con
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  KCoreStep2 <<<blocks, threads>>>(ctx->gg, __begin, __end, ctx->current_degree.data.gpu_wr_ptr(), ctx->flag.data.gpu_wr_ptr(), ctx->trim.data.gpu_wr_ptr());
+  hipLaunchKernelGGL((KCoreStep2), dim3(blocks), dim3(threads), 0, 0, ctx->gg, __begin, __end, ctx->current_degree.data.gpu_wr_ptr(), ctx->flag.data.gpu_wr_ptr(), ctx->trim.data.gpu_wr_ptr());
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;
@@ -626,7 +627,7 @@ void KCoreStep1_cuda(unsigned int  __begin, unsigned int  __end, unsigned int & 
   // FP: "7 -> 8;
   _DGAccumulator_accum.rv = DGAccumulator_accumval.gpu_wr_ptr();
   // FP: "8 -> 9;
-  KCoreStep1 <<<blocks, __tb_KCoreStep1>>>(ctx->gg, __begin, __end, local_k_core_num, ctx->current_degree.data.gpu_wr_ptr(), ctx->flag.data.gpu_wr_ptr(), ctx->trim.data.gpu_wr_ptr(), *(ctx->trim.is_updated.gpu_rd_ptr()), _DGAccumulator_accum);
+  hipLaunchKernelGGL((KCoreStep1), dim3(blocks), dim3(__tb_KCoreStep1), 0, 0, ctx->gg, __begin, __end, local_k_core_num, ctx->current_degree.data.gpu_wr_ptr(), ctx->flag.data.gpu_wr_ptr(), ctx->trim.data.gpu_wr_ptr(), (ctx->trim.is_updated.gpu_rd_ptr()), _DGAccumulator_accum);
   // FP: "9 -> 10;
   check_cuda_kernel;
   // FP: "10 -> 11;
@@ -668,7 +669,7 @@ void KCoreSanityCheck_cuda(unsigned int  __begin, unsigned int  __end, uint64_t 
   // FP: "7 -> 8;
   _DGAccumulator_accum.rv = DGAccumulator_accumval.gpu_wr_ptr();
   // FP: "8 -> 9;
-  KCoreSanityCheck <<<blocks, threads>>>(ctx->gg, __begin, __end, ctx->flag.data.gpu_wr_ptr(), _DGAccumulator_accum);
+  hipLaunchKernelGGL((KCoreSanityCheck), dim3(blocks), dim3(threads), 0, 0, ctx->gg, __begin, __end, ctx->flag.data.gpu_wr_ptr(), _DGAccumulator_accum);
   // FP: "9 -> 10;
   check_cuda_kernel;
   // FP: "10 -> 11;

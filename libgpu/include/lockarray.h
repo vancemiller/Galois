@@ -64,7 +64,7 @@ public:
   LockArrayTicket(size_t nlocks) : LockArraySimple(nlocks) {
     tickets  = Shared<int>(nlocks);
     gtickets = tickets.gpu_wr_ptr();
-    assert(cudaMemset(gtickets, 0, nlocks * sizeof(int)) == cudaSuccess);
+    assert(hipMemset(gtickets, 0, nlocks * sizeof(int)) == hipSuccess);
   }
 
   __device__ int reserve(int ndx) {

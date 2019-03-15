@@ -3,9 +3,9 @@ set(sources
         src/ggc_rt.cu
 )
 
-cuda_add_library(galois_gpu
+hip_add_library(galois_gpu
   ${sources}
-  OPTIONS -D_FORCE_INLINES
+  HIPCC_OPTIONS -D_FORCE_INLINES
 )
 
 set_target_properties (galois_gpu PROPERTIES 

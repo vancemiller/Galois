@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 /*
  * This file belongs to the Galois project, a C++ library for exploiting parallelism.
  * The code is being released under the terms of the 3-Clause BSD License (a
@@ -27,7 +28,7 @@ const char *GGC_OPTIONS = "coop_conv=False $ outline_iterate_gb=False $ backoff_
 #include "kernels/reduce.cuh"
 #include "kcore_pull_cuda.cuh"
 static const int __tb_KCore = TB_SIZE;
-__global__ void DegreeCounting(CSRGraph graph, unsigned int __begin, unsigned int __end, uint32_t * p_current_degree, DynamicBitset& bitset_current_degree)
+__global__ void DegreeCounting(CSRGraph graph, unsigned int __begin, unsigned int __end, uint32_t * p_current_degree, DynamicBitset * bitset_current_degree)
 {
   unsigned tid = TID_1D;
   unsigned nthreads = TOTAL_THREADS_1D;
@@ -42,7 +43,7 @@ __global__ void DegreeCounting(CSRGraph graph, unsigned int __begin, unsigned in
     if (pop)
     {
       p_current_degree[src] = graph.getOutDegree(src);
-      bitset_current_degree.set(src);
+      bitset_current_degree->set(src);
     }
   }
   // FP: "8 -> 9;
@@ -114,7 +115,7 @@ __global__ void LiveUpdate(CSRGraph graph, unsigned int __begin, unsigned int __
   DGAccumulator_accum.thread_exit<cub::BlockReduce<unsigned int, TB_SIZE> >(DGAccumulator_accum_ts);
   // FP: "23 -> 24;
 }
-__global__ void KCore(CSRGraph graph, unsigned int __begin, unsigned int __end, uint8_t * p_flag, uint8_t * p_pull_flag, uint32_t * p_trim, DynamicBitset& bitset_trim)
+__global__ void KCore(CSRGraph graph, unsigned int __begin, unsigned int __end, uint8_t * p_flag, uint8_t * p_pull_flag, uint32_t * p_trim, DynamicBitset * bitset_trim)
 {
   unsigned tid = TID_1D;
   unsigned nthreads = TOTAL_THREADS_1D;
@@ -219,7 +220,7 @@ __global__ void KCore(CSRGraph graph, unsigned int __begin, unsigned int __end, 
         nps.tb.owner = MAX_TB_SIZE + 1;
       }
       // FP: "45 -> 46;
-      assert(nps.tb.src < __kernel_tb_size);
+      //assert(nps.tb.src < __kernel_tb_size);
       src = _np_closure[nps.tb.src].src;
       // FP: "46 -> 47;
       for (int _np_j = threadIdx.x; _np_j < ne; _np_j += BLKSIZE)
@@ -232,7 +233,7 @@ __global__ void KCore(CSRGraph graph, unsigned int __begin, unsigned int __end, 
           if (p_pull_flag[dst])
           {
             atomicTestAdd(&p_trim[src], (uint32_t)1);
-            bitset_trim.set(src);
+            bitset_trim->set(src);
           }
         }
       }
@@ -263,7 +264,7 @@ __global__ void KCore(CSRGraph graph, unsigned int __begin, unsigned int __end, 
         }
         index_type _np_w_start = nps.warp.start[warpid];
         index_type _np_w_size = nps.warp.size[warpid];
-        assert(nps.warp.src[warpid] < __kernel_tb_size);
+        //assert(nps.warp.src[warpid] < __kernel_tb_size);
         src = _np_closure[nps.warp.src[warpid]].src;
         for (int _np_ii = _np_laneid; _np_ii < _np_w_size; _np_ii += 32)
         {
@@ -275,7 +276,7 @@ __global__ void KCore(CSRGraph graph, unsigned int __begin, unsigned int __end, 
             if (p_pull_flag[dst])
             {
               atomicTestAdd(&p_trim[src], (uint32_t)1);
-              bitset_trim.set(src);
+              bitset_trim->set(src);
             }
           }
         }
@@ -305,7 +306,7 @@ __global__ void KCore(CSRGraph graph, unsigned int __begin, unsigned int __end, 
       for (_np_i = threadIdx.x; _np_i < ITSIZE && _np.valid(_np_i); _np_i += BLKSIZE)
       {
         index_type current_edge;
-        assert(nps.fg.src[_np_i] < __kernel_tb_size);
+        //assert(nps.fg.src[_np_i] < __kernel_tb_size);
         src = _np_closure[nps.fg.src[_np_i]].src;
         current_edge= nps.fg.itvalue[_np_i];
         {
@@ -314,7 +315,7 @@ __global__ void KCore(CSRGraph graph, unsigned int __begin, unsigned int __end, 
           if (p_pull_flag[dst])
           {
             atomicTestAdd(&p_trim[src], (uint32_t)1);
-            bitset_trim.set(src);
+            bitset_trim->set(src);
           }
         }
       }
@@ -324,7 +325,7 @@ __global__ void KCore(CSRGraph graph, unsigned int __begin, unsigned int __end, 
       __syncthreads();
     }
     // FP: "104 -> 105;
-    assert(threadIdx.x < __kernel_tb_size);
+    //assert(threadIdx.x < __kernel_tb_size);
     src = _np_closure[threadIdx.x].src;
   }
   // FP: "106 -> 107;
@@ -366,7 +367,7 @@ void DegreeCounting_cuda(unsigned int  __begin, unsigned int  __end, struct CUDA
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  DegreeCounting <<<blocks, threads>>>(ctx->gg, __begin, __end, ctx->current_degree.data.gpu_wr_ptr(), *(ctx->current_degree.is_updated.gpu_rd_ptr()));
+  hipLaunchKernelGGL((DegreeCounting), dim3(blocks), dim3(threads), 0, 0, ctx->gg, __begin, __end, ctx->current_degree.data.gpu_wr_ptr(), (ctx->current_degree.is_updated.gpu_rd_ptr()));
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;
@@ -398,7 +399,7 @@ void InitializeGraph_cuda(unsigned int  __begin, unsigned int  __end, struct CUD
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  InitializeGraph <<<blocks, threads>>>(ctx->gg, __begin, __end, ctx->current_degree.data.gpu_wr_ptr(), ctx->flag.data.gpu_wr_ptr(), ctx->pull_flag.data.gpu_wr_ptr(), ctx->trim.data.gpu_wr_ptr());
+  hipLaunchKernelGGL((InitializeGraph), dim3(blocks), dim3(threads), 0, 0, ctx->gg, __begin, __end, ctx->current_degree.data.gpu_wr_ptr(), ctx->flag.data.gpu_wr_ptr(), ctx->pull_flag.data.gpu_wr_ptr(), ctx->trim.data.gpu_wr_ptr());
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;
@@ -438,7 +439,7 @@ void LiveUpdate_cuda(unsigned int  __begin, unsigned int  __end, unsigned int & 
   // FP: "7 -> 8;
   _DGAccumulator_accum.rv = DGAccumulator_accumval.gpu_wr_ptr();
   // FP: "8 -> 9;
-  LiveUpdate <<<blocks, threads>>>(ctx->gg, __begin, __end, local_k_core_num, ctx->current_degree.data.gpu_wr_ptr(), ctx->flag.data.gpu_wr_ptr(), ctx->pull_flag.data.gpu_wr_ptr(), ctx->trim.data.gpu_wr_ptr(), _DGAccumulator_accum);
+  hipLaunchKernelGGL((LiveUpdate), dim3(blocks), dim3(threads), 0, 0, ctx->gg, __begin, __end, local_k_core_num, ctx->current_degree.data.gpu_wr_ptr(), ctx->flag.data.gpu_wr_ptr(), ctx->pull_flag.data.gpu_wr_ptr(), ctx->trim.data.gpu_wr_ptr(), _DGAccumulator_accum);
   // FP: "9 -> 10;
   check_cuda_kernel;
   // FP: "10 -> 11;
@@ -472,7 +473,7 @@ void KCore_cuda(unsigned int  __begin, unsigned int  __end, struct CUDA_Context*
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  KCore <<<blocks, __tb_KCore>>>(ctx->gg, __begin, __end, ctx->flag.data.gpu_wr_ptr(), ctx->pull_flag.data.gpu_wr_ptr(), ctx->trim.data.gpu_wr_ptr(), *(ctx->trim.is_updated.gpu_rd_ptr()));
+  hipLaunchKernelGGL((KCore), dim3(blocks), dim3(__tb_KCore), 0, 0, ctx->gg, __begin, __end, ctx->flag.data.gpu_wr_ptr(), ctx->pull_flag.data.gpu_wr_ptr(), ctx->trim.data.gpu_wr_ptr(), (ctx->trim.is_updated.gpu_rd_ptr()));
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;
@@ -512,7 +513,7 @@ void KCoreSanityCheck_cuda(unsigned int  __begin, unsigned int  __end, uint64_t 
   // FP: "7 -> 8;
   _DGAccumulator_accum.rv = DGAccumulator_accumval.gpu_wr_ptr();
   // FP: "8 -> 9;
-  KCoreSanityCheck <<<blocks, threads>>>(ctx->gg, __begin, __end, ctx->flag.data.gpu_wr_ptr(), _DGAccumulator_accum);
+  hipLaunchKernelGGL((KCoreSanityCheck), dim3(blocks), dim3(threads), 0, 0, ctx->gg, __begin, __end, ctx->flag.data.gpu_wr_ptr(), _DGAccumulator_accum);
   // FP: "9 -> 10;
   check_cuda_kernel;
   // FP: "10 -> 11;

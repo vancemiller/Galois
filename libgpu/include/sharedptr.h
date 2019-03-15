@@ -73,7 +73,7 @@ public:
     if (isCPU[device])
       ::free(ptrs[device]);
     else {
-      if (cudaFree(ptrs[device]) == cudaSuccess)
+      if (hipFree(ptrs[device]) == hipSuccess)
         ptrs[device] = NULL;
       else
         return false;
@@ -133,7 +133,7 @@ public:
     assert(device >= 1);
 
     if (ptrs[device] == NULL)
-      CUDA_SAFE_CALL(cudaMalloc(&ptrs[device], nmemb * sizeof(T)));
+      CUDA_SAFE_CALL(hipMalloc(&ptrs[device], nmemb * sizeof(T)));
 
     if (!owner[device]) {
       int o;
@@ -150,7 +150,7 @@ public:
     assert(device >= 1);
 
     if (ptrs[device] == NULL) {
-      CUDA_SAFE_CALL(cudaMalloc(&ptrs[device], nmemb * sizeof(T)));
+      CUDA_SAFE_CALL(hipMalloc(&ptrs[device], nmemb * sizeof(T)));
     }
 
     if (!owner[device]) {
@@ -172,7 +172,7 @@ public:
 
   T* zero_gpu(int device = 1) {
     T* p = gpu_wr_ptr(true, device);
-    CUDA_SAFE_CALL(cudaMemset(p, 0, sizeof(T) * nmemb));
+    CUDA_SAFE_CALL(hipMemset(p, 0, sizeof(T) * nmemb));
     return p;
   }
 
@@ -183,14 +183,14 @@ public:
     assert(ptrs[dst]);
 
     if (isCPU[dst] && !isCPU[src]) {
-      CUDA_SAFE_CALL(cudaMemcpy(ptrs[dst], ptrs[src], nmemb * sizeof(T),
-                                cudaMemcpyDeviceToHost));
+      CUDA_SAFE_CALL(hipMemcpy(ptrs[dst], ptrs[src], nmemb * sizeof(T),
+                                hipMemcpyDeviceToHost));
     } else if (!isCPU[dst] && !isCPU[src]) {
-      CUDA_SAFE_CALL(cudaMemcpy(ptrs[dst], ptrs[src], nmemb * sizeof(T),
-                                cudaMemcpyDeviceToDevice));
+      CUDA_SAFE_CALL(hipMemcpy(ptrs[dst], ptrs[src], nmemb * sizeof(T),
+                                hipMemcpyDeviceToDevice));
     } else if (!isCPU[dst] && isCPU[src]) {
-      CUDA_SAFE_CALL(cudaMemcpy(ptrs[dst], ptrs[src], nmemb * sizeof(T),
-                                cudaMemcpyHostToDevice));
+      CUDA_SAFE_CALL(hipMemcpy(ptrs[dst], ptrs[src], nmemb * sizeof(T),
+                                hipMemcpyHostToDevice));
     } else
       abort(); // cpu-to-cpu not implemented
   }
@@ -225,13 +225,13 @@ public:
   void alloc(size_t nmemb) {
     assert(this->nmemb == 0);
     this->nmemb = nmemb;
-    CUDA_SAFE_CALL(cudaMalloc(&ptr, nmemb * sizeof(T)));
+    CUDA_SAFE_CALL(hipMalloc(&ptr, nmemb * sizeof(T)));
   }
 
   bool free() {
     if (ptr == NULL)
       return true;
-    if (cudaFree(ptr) == cudaSuccess) {
+    if (hipFree(ptr) == hipSuccess) {
       ptr = NULL;
       return true;
     }
@@ -239,7 +239,7 @@ public:
   }
 
   T* zero_gpu() {
-    CUDA_SAFE_CALL(cudaMemset(ptr, 0, sizeof(T) * nmemb));
+    CUDA_SAFE_CALL(hipMemset(ptr, 0, sizeof(T) * nmemb));
     return ptr;
   }
 
@@ -251,7 +251,7 @@ public:
     assert(ptr != NULL);
     assert(nuseb <= nmemb);
     CUDA_SAFE_CALL(
-        cudaMemcpy(ptr, cpu_ptr, nuseb * sizeof(T), cudaMemcpyHostToDevice));
+        hipMemcpy(ptr, cpu_ptr, nuseb * sizeof(T), hipMemcpyHostToDevice));
   }
 
   void copy_to_cpu(T* cpu_ptr) { copy_to_cpu(cpu_ptr, nmemb); }
@@ -262,7 +262,7 @@ public:
     assert(cpu_ptr != NULL);
     assert(nuseb <= nmemb);
     CUDA_SAFE_CALL(
-        cudaMemcpy(cpu_ptr, ptr, nuseb * sizeof(T), cudaMemcpyDeviceToHost));
+        hipMemcpy(cpu_ptr, ptr, nuseb * sizeof(T), hipMemcpyDeviceToHost));
   }
 
   __device__ __host__ T* device_ptr() {

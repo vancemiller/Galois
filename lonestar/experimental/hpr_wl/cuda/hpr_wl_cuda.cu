@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 /*
  * This file belongs to the Galois project, a C++ library for exploiting parallelism.
  * The code is being released under the terms of the 3-Clause BSD License (a
@@ -128,21 +129,21 @@ struct CUDA_Context *get_CUDA_context(int id) {
 }
 
 bool init_CUDA_context(struct CUDA_Context *ctx, int device) {
-    struct cudaDeviceProp dev;
+    struct hipDeviceProp_t dev;
     if(device == -1) {
-        check_cuda(cudaGetDevice(&device));
+        check_cuda(hipGetDevice(&device));
     } else {
     int count;
-    check_cuda(cudaGetDeviceCount(&count));
+    check_cuda(hipGetDeviceCount(&count));
     if(device > count) {
         fprintf(stderr, "Error: Out-of-range GPU %d specified (%d total GPUs)", device, count);
         return false;
     }
-    check_cuda(cudaSetDevice(device));
+    check_cuda(hipSetDevice(device));
     }
   
     ctx->device = device;
-    check_cuda(cudaGetDeviceProperties(&dev, device));
+    check_cuda(hipGetDeviceProperties(&dev, device));
     fprintf(stderr, "%d: Using GPU %d: %s\n", ctx->id, device, dev.name);
     return true;
 }
@@ -219,27 +220,27 @@ void load_graph_CUDA(struct CUDA_Context *ctx, MarshalGraph &g) {
 void initialize_graph_cuda(struct CUDA_Context *ctx) {  
     ctx->nout.zero_gpu();
   
-    initialize_graph<<<14, 256>>>(ctx->gg, ctx->nowned, ctx->pr[0].gpu_wr_ptr(), ctx->pr[1].gpu_wr_ptr(), ctx->nout.gpu_wr_ptr(), ctx->wl);
+    hipLaunchKernelGGL((initialize_graph), dim3(14), dim3(256), 0, 0, ctx->gg, ctx->nowned, ctx->pr[0].gpu_wr_ptr(), ctx->pr[1].gpu_wr_ptr(), ctx->nout.gpu_wr_ptr(), ctx->wl);
 
-    initialize_nout<<<14, 256>>>(ctx->gg, ctx->nowned, ctx->nout.gpu_wr_ptr());
-    check_cuda(cudaDeviceSynchronize());
+    hipLaunchKernelGGL((initialize_nout), dim3(14), dim3(256), 0, 0, ctx->gg, ctx->nowned, ctx->nout.gpu_wr_ptr());
+    check_cuda(hipDeviceSynchronize());
 }
 
 int pagerank_cuda(struct CUDA_Context *ctx) { 
     Worklist2 *inwl = &ctx->wl, *outwl = &ctx->wl2;
-    pagerank<<<14, 256>>>(ctx->gg, ctx->nowned, ctx->nout.gpu_wr_ptr(), ctx->pr[ctx->pr_it].gpu_wr_ptr(), ctx->pr[ctx->pr_it ^ 1].gpu_wr_ptr(), *inwl, *outwl);
+    hipLaunchKernelGGL((pagerank), dim3(14), dim3(256), 0, 0, ctx->gg, ctx->nowned, ctx->nout.gpu_wr_ptr(), ctx->pr[ctx->pr_it].gpu_wr_ptr(), ctx->pr[ctx->pr_it ^ 1].gpu_wr_ptr(), *inwl, *outwl);
     ctx->pr_it ^= 1;  // not sure this is to be done here
 
     std::swap(ctx->wl, ctx->wl2); //switch lists
     ctx->wl2.reset();
 
-    check_cuda(cudaDeviceSynchronize());
+    check_cuda(hipDeviceSynchronize());
     return ctx->wl.nitems();
 }
 
 void test_graph_cuda(struct CUDA_Context *ctx) {  
-    test_graph<<<14, 256>>>(ctx->gg, ctx->nowned, ctx->pr[0].gpu_wr_ptr(), ctx->pr[1].gpu_wr_ptr(), ctx->nout.gpu_wr_ptr(), ctx->id);
-    check_cuda(cudaDeviceSynchronize());
+    hipLaunchKernelGGL((test_graph), dim3(14), dim3(256), 0, 0, ctx->gg, ctx->nowned, ctx->pr[0].gpu_wr_ptr(), ctx->pr[1].gpu_wr_ptr(), ctx->nout.gpu_wr_ptr(), ctx->id);
+    check_cuda(hipDeviceSynchronize());
 }
 
 
@@ -247,6 +248,6 @@ void test_cuda(struct CUDA_Context *ctx) {
     printf("hello from cuda!\n");
     CSRGraphTy &gg = ctx->gg;
 
-    test_cuda_too<<<1, 1>>>(gg);
-    check_cuda(cudaDeviceSynchronize());
+    hipLaunchKernelGGL((test_cuda_too), dim3(1), dim3(1), 0, 0, gg);
+    check_cuda(hipDeviceSynchronize());
 }

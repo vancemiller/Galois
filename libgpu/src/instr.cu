@@ -290,7 +290,7 @@ size_t instr_read_array_gpu(const char *n,
 
   size_t nelems = instr_read_array(n, f, elemsz, maxnelems, cp);
 
-  check_cuda(cudaMemcpy(gp, cp, nelems * elemsz, cudaMemcpyHostToDevice));
+  check_cuda(hipMemcpy(gp, cp, nelems * elemsz, hipMemcpyHostToDevice));
   
   if(allocated) 
     free(cp);
@@ -311,7 +311,7 @@ void instr_write_array_gpu(const char *n,
     assert(cp != NULL);
   }
 
-  check_cuda(cudaMemcpy(cp, gp, nelems * elemsz, cudaMemcpyDeviceToHost));
+  check_cuda(hipMemcpy(cp, gp, nelems * elemsz, hipMemcpyDeviceToHost));
   
   instr_write_array(n, f, elemsz, nelems, cp);
 

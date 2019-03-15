@@ -1,12 +1,12 @@
 add_library(distbench STATIC src/DistBenchStart.cpp)
-target_include_directories(distbench PUBLIC 
+target_include_directories(distbench PUBLIC
   ${CMAKE_SOURCE_DIR}/libdist/include
   ${CMAKE_SOURCE_DIR}/libgalois/include
   ${CMAKE_SOURCE_DIR}/libllvm/include
   ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-# turn on cuda for distbench as well
+# turn on hip for distbench as well
 if(ENABLE_HETERO_GALOIS)
   target_compile_definitions(distbench PRIVATE __GALOIS_HET_CUDA__=1)
 endif()
@@ -18,11 +18,9 @@ include_directories(${CMAKE_SOURCE_DIR}/libdist/include)
 include_directories(${CMAKE_SOURCE_DIR}/libgalois/include)
 
 if(ENABLE_HETERO_GALOIS)
-  # for debugging 
+  # for debugging
   if(CMAKE_BUILD_TYPE MATCHES "Debug")
     add_definitions(-D__GALOIS_CUDA_CHECK_ERROR__)
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; -lineinfo)
-
     add_definitions(-D__GALOIS_DEBUG_WORKLIST__)
   endif()
 endif()
@@ -39,7 +37,7 @@ function(distApp name)
     target_compile_definitions(${name} PRIVATE __GALOIS_HET_CUDA__=1)
     target_link_libraries(${name} ${name}_cuda)
 
-    cuda_add_library(${name}_cuda ${name}/${name}_cuda.cu)
+    hip_add_library(${name}_cuda ${name}/${name}_cuda.cu HIPCC_OPTIONS -fPIC)
     target_link_libraries(${name}_cuda galois_gpu)
   endif()
 endfunction()

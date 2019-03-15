@@ -69,7 +69,7 @@ struct PipeContextT {
 
   __device__ __host__ inline void retry2() { swap(re, in); }
 
-  __host__ void prep() { check_cuda(cudaMalloc(&ois, sizeof(struct oi_save))); }
+  __host__ void prep() { check_cuda(hipMalloc(&ois, sizeof(struct oi_save))); }
 
   __device__ void save() {
     ois->in  = in;
@@ -83,8 +83,8 @@ struct PipeContextT {
 
   __host__ void restore() {
     struct oi_save local;
-    check_cuda(cudaMemcpy(&local, ois, sizeof(struct oi_save),
-                          cudaMemcpyDeviceToHost));
+    check_cuda(hipMemcpy(&local, ois, sizeof(struct oi_save),
+                          hipMemcpyDeviceToHost));
 
     in  = local.in;
     out = local.out;
@@ -94,7 +94,7 @@ struct PipeContextT {
     wl[out].set_slot(local.out_currslot);
     wl[re].set_slot(local.re_currslot);
 
-    check_cuda(cudaFree(ois));
+    check_cuda(hipFree(ois));
   }
 
   __host__ void free() {
@@ -167,7 +167,7 @@ struct PipeContextLight {
   /* } */
 
   /* __host__ void prep() { */
-  /*   check_cuda(cudaMalloc(&ois, sizeof(struct oi_save))); */
+  /*   check_cuda(hipMalloc(&ois, sizeof(struct oi_save))); */
   /* } */
 
   template <typename T>
@@ -183,8 +183,8 @@ struct PipeContextLight {
 
   /* __host__ void restore() { */
   /*   struct oi_save local; */
-  /*   check_cuda(cudaMemcpy(&local, ois, sizeof(struct oi_save),
-   * cudaMemcpyDeviceToHost)); */
+  /*   check_cuda(hipMemcpy(&local, ois, sizeof(struct oi_save),
+   * hipMemcpyDeviceToHost)); */
 
   /*   index = local.in; */
   /*   // = local.out; */
@@ -194,7 +194,7 @@ struct PipeContextLight {
   /*   wl[index ^ 1].set_slot(local.out_currslot); */
   /*   //wl[2].set_slot(local.re_currslot); */
 
-  /*   check_cuda(cudaFree(ois)); */
+  /*   check_cuda(hipFree(ois)); */
   /* }     */
 
   /* __host__ void free() { */

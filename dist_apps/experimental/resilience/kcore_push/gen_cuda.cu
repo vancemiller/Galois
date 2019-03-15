@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 /*
  * This file belongs to the Galois project, a C++ library for exploiting parallelism.
  * The code is being released under the terms of the 3-Clause BSD License (a
@@ -473,7 +474,7 @@ void InitializeGraph2_cuda(unsigned int  __begin, unsigned int  __end, struct CU
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  InitializeGraph2 <<<blocks, __tb_InitializeGraph2>>>(ctx->gg, 
+  hipLaunchKernelGGL((InitializeGraph2), dim3(blocks), dim3(__tb_InitializeGraph2), 0, 0, ctx->gg, 
   ctx->current_degree.is_updated.gpu_rd_ptr(),
   ctx->numNodesWithEdges, __begin, __end, ctx->current_degree.data.gpu_wr_ptr());
   // FP: "5 -> 6;
@@ -495,7 +496,7 @@ void InitializeGraph1_cuda(unsigned int  __begin, unsigned int  __end, struct CU
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  InitializeGraph1 <<<blocks, threads>>>(ctx->gg, 
+  hipLaunchKernelGGL((InitializeGraph1), dim3(blocks), dim3(threads), 0, 0, ctx->gg, 
     ctx->numNodesWithEdges, __begin, __end, ctx->current_degree.data.gpu_wr_ptr(), 
     ctx->flag.data.gpu_wr_ptr(), ctx->trim.data.gpu_wr_ptr());
   // FP: "5 -> 6;
@@ -517,7 +518,7 @@ void KCoreStep2_cuda(unsigned int  __begin, unsigned int  __end, struct CUDA_Con
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  KCoreStep2 <<<blocks, threads>>>(ctx->gg, 
+  hipLaunchKernelGGL((KCoreStep2), dim3(blocks), dim3(threads), 0, 0, ctx->gg, 
     ctx->numNodesWithEdges, __begin, __end, ctx->current_degree.data.gpu_wr_ptr(), 
     ctx->trim.data.gpu_wr_ptr(), ctx->flag.data.gpu_wr_ptr());
   // FP: "5 -> 6;
@@ -543,7 +544,7 @@ void KCoreStep1_cuda(unsigned int  __begin, unsigned int  __end, int & __retval,
   HGAccumulator<int> _rv;
   *(retval.cpu_wr_ptr()) = 0;
   _rv.rv = retval.gpu_wr_ptr();
-  KCoreStep1 <<<blocks, __tb_KCoreStep1>>>(ctx->gg, 
+  hipLaunchKernelGGL((KCoreStep1), dim3(blocks), dim3(__tb_KCoreStep1), 0, 0, ctx->gg, 
   ctx->trim.is_updated.gpu_rd_ptr(),
   ctx->numNodesWithEdges, __begin, __end, local_k_core_num, ctx->current_degree.data.gpu_wr_ptr(), ctx->flag.data.gpu_wr_ptr(), ctx->trim.data.gpu_wr_ptr(), _rv);
   // FP: "5 -> 6;
@@ -567,7 +568,7 @@ void KCoreSanityCheck_cuda(unsigned int & sum, struct CUDA_Context * ctx)
   HGAccumulator<unsigned int> _sum;
   *(sumval.cpu_wr_ptr()) = 0;
   _sum.rv = sumval.gpu_wr_ptr();
-  KCoreSanityCheck <<<blocks, __tb_KCoreStep1>>>(ctx->gg, ctx->beginMaster, ctx->beginMaster+ctx->numOwned, ctx->flag.data.gpu_rd_ptr(), _sum);
+  hipLaunchKernelGGL((KCoreSanityCheck), dim3(blocks), dim3(__tb_KCoreStep1), 0, 0, ctx->gg, ctx->beginMaster, ctx->beginMaster+ctx->numOwned, ctx->flag.data.gpu_rd_ptr(), _sum);
   check_cuda_kernel;
   sum = *(sumval.cpu_rd_ptr());
 }

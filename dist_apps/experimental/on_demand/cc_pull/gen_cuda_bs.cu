@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 /*
  * This file belongs to the Galois project, a C++ library for exploiting parallelism.
  * The code is being released under the terms of the 3-Clause BSD License (a
@@ -244,7 +245,7 @@ void InitializeGraph_cuda(unsigned int  __begin, unsigned int  __end, struct CUD
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  InitializeGraph <<<blocks, threads>>>(ctx->gg, ctx->nowned, __begin, __end, ctx->comp_current.data.gpu_wr_ptr());
+  hipLaunchKernelGGL((InitializeGraph), dim3(blocks), dim3(threads), 0, 0, ctx->gg, ctx->nowned, __begin, __end, ctx->comp_current.data.gpu_wr_ptr());
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;
@@ -268,7 +269,7 @@ void ConnectedComp_cuda(unsigned int  __begin, unsigned int  __end, int & __retv
   Sum _rv;
   *(retval.cpu_wr_ptr()) = 0;
   _rv.rv = retval.gpu_wr_ptr();
-  ConnectedComp <<<blocks, __tb_ConnectedComp>>>(ctx->gg, ctx->comp_current.is_updated.gpu_rd_ptr(), ctx->nowned, __begin, __end, ctx->comp_current.data.gpu_wr_ptr(), _rv);
+  hipLaunchKernelGGL((ConnectedComp), dim3(blocks), dim3(__tb_ConnectedComp), 0, 0, ctx->gg, ctx->comp_current.is_updated.gpu_rd_ptr(), ctx->nowned, __begin, __end, ctx->comp_current.data.gpu_wr_ptr(), _rv);
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;

@@ -6,17 +6,17 @@ static struct ggc_rt_dev_info dinfo = {-1, -1};
 
 void ggc_init_dev_info() {
   int dev;
-  struct cudaDeviceProp p;
+  struct hipDeviceProp_t p;
 
-  check_cuda(cudaGetDevice(&dev));
+  check_cuda(hipGetDevice(&dev));
   dinfo.dev = dev;
   
-  check_cuda(cudaGetDeviceProperties(&p, dev));
+  check_cuda(hipGetDeviceProperties(&p, dev));
   dinfo.nSM = p.multiProcessorCount;
 }
 
 void ggc_set_gpu_device(int dev) {
-  check_cuda(cudaSetDevice(dev));
+  check_cuda(hipSetDevice(dev));
   ggc_init_dev_info();
 }
 

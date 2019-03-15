@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 /*
  * This file belongs to the Galois project, a C++ library for exploiting parallelism.
  * The code is being released under the terms of the 3-Clause BSD License (a
@@ -34,10 +35,10 @@
 
 #ifdef __GALOIS_CUDA_CHECK_ERROR__
 #define check_cuda_kernel                                                      \
-  check_cuda(cudaDeviceSynchronize());                                         \
-  check_cuda(cudaGetLastError());
+  check_cuda(hipDeviceSynchronize());                                         \
+  check_cuda(hipGetLastError());
 #else
-#define check_cuda_kernel check_cuda(cudaGetLastError());
+#define check_cuda_kernel check_cuda(hipGetLastError());
 #endif
 
 enum SharedType { sharedMaster, sharedMirror };
@@ -371,7 +372,7 @@ void reset_bitset_field(struct CUDA_Context_Field<DataType>* field,
     }
   }
 
-  bitset_reset_range<<<blocks, threads>>>(field->is_updated.gpu_rd_ptr(),
+  hipLaunchKernelGGL((bitset_reset_range), dim3(blocks), dim3(threads), 0, 0, field->is_updated.gpu_rd_ptr(),
                                           vec_begin, vec_end, test1, bit_index1,
                                           mask1, test2, bit_index2, mask2);
 }
@@ -383,7 +384,7 @@ void reset_data_field(struct CUDA_Context_Field<DataType>* field, size_t begin,
   dim3 threads;
   kernel_sizing(blocks, threads);
 
-  batch_reset<DataType><<<blocks, threads>>>(
+  hipLaunchKernelGGL((batch_reset<DataType>), dim3(blocks), dim3(threads), 0, 0, 
       field->data.gpu_wr_ptr(), (index_type)begin, (index_type)end, val);
 }
 
@@ -401,12 +402,12 @@ void get_offsets_from_bitset(index_type bitset_size,
                              offset_iterator, flag_iterator, offsets,
                              num_set_bits_ptr.gpu_wr_ptr(true), bitset_size);
   check_cuda_kernel;
-  CUDA_SAFE_CALL(cudaMalloc(&d_temp_storage, temp_storage_bytes));
+  CUDA_SAFE_CALL(hipMalloc(&d_temp_storage, temp_storage_bytes));
   cub::DeviceSelect::Flagged(d_temp_storage, temp_storage_bytes,
                              offset_iterator, flag_iterator, offsets,
                              num_set_bits_ptr.gpu_wr_ptr(true), bitset_size);
   check_cuda_kernel;
-  CUDA_SAFE_CALL(cudaFree(d_temp_storage));
+  CUDA_SAFE_CALL(hipFree(d_temp_storage));
   *num_set_bits = *num_set_bits_ptr.cpu_rd_ptr();
 }
 
@@ -430,11 +431,11 @@ void batch_get_shared_field(struct CUDA_Context_Common* ctx,
   // timer1.start();
   size_t v_size = shared->num_nodes[from_id];
   if (reset) {
-    batch_get_reset_subset<DataType><<<blocks, threads>>>(
+    hipLaunchKernelGGL((batch_get_reset_subset<DataType>), dim3(blocks), dim3(threads), 0, 0, 
         v_size, shared->nodes[from_id].device_ptr(), shared_data->device_ptr(),
         field->data.gpu_wr_ptr(), i);
   } else {
-    batch_get_subset<DataType><<<blocks, threads>>>(
+    hipLaunchKernelGGL((batch_get_subset<DataType>), dim3(blocks), dim3(threads), 0, 0, 
         v_size, shared->nodes[from_id].device_ptr(), shared_data->device_ptr(),
         field->data.gpu_rd_ptr());
   }
@@ -474,7 +475,7 @@ void batch_get_shared_field(struct CUDA_Context_Common* ctx,
     // timer1.start();
     ctx->is_updated.cpu_rd_ptr()->resize(shared->num_nodes[from_id]);
     ctx->is_updated.cpu_rd_ptr()->reset();
-    batch_get_subset_bitset<<<blocks, threads>>>(
+    hipLaunchKernelGGL((batch_get_subset_bitset), dim3(blocks), dim3(threads), 0, 0, 
         shared->num_nodes[from_id], shared->nodes[from_id].device_ptr(),
         ctx->is_updated.gpu_rd_ptr(), field->is_updated.gpu_rd_ptr());
     check_cuda_kernel;
@@ -490,22 +491,22 @@ void batch_get_shared_field(struct CUDA_Context_Common* ctx,
   if ((*data_mode) == onlyData) {
     *v_size = shared->num_nodes[from_id];
     if (reset) {
-      batch_get_reset_subset<DataType><<<blocks, threads>>>(
+      hipLaunchKernelGGL((batch_get_reset_subset<DataType>), dim3(blocks), dim3(threads), 0, 0, 
           *v_size, shared->nodes[from_id].device_ptr(),
           shared_data->device_ptr(), field->data.gpu_wr_ptr(), i);
     } else {
-      batch_get_subset<DataType><<<blocks, threads>>>(
+      hipLaunchKernelGGL((batch_get_subset<DataType>), dim3(blocks), dim3(threads), 0, 0, 
           *v_size, shared->nodes[from_id].device_ptr(),
           shared_data->device_ptr(), field->data.gpu_rd_ptr());
     }
   } else { // bitsetData || offsetsData
     if (reset) {
-      batch_get_reset_subset<DataType><<<blocks, threads>>>(
+      hipLaunchKernelGGL((batch_get_reset_subset<DataType>), dim3(blocks), dim3(threads), 0, 0, 
           *v_size, shared->nodes[from_id].device_ptr(),
           ctx->offsets.device_ptr(), shared_data->device_ptr(),
           field->data.gpu_wr_ptr(), i);
     } else {
-      batch_get_subset<DataType><<<blocks, threads>>>(
+      hipLaunchKernelGGL((batch_get_subset<DataType>), dim3(blocks), dim3(threads), 0, 0, 
           *v_size, shared->nodes[from_id].device_ptr(),
           ctx->offsets.device_ptr(), shared_data->device_ptr(),
           field->data.gpu_rd_ptr());
@@ -567,48 +568,48 @@ void batch_set_shared_field(struct CUDA_Context_Common* ctx,
   // timer2.start();
   if (data_mode == onlyData) {
     if (op == setOp) {
-      batch_set_subset<DataType><<<blocks, threads>>>(
+      hipLaunchKernelGGL((batch_set_subset<DataType>), dim3(blocks), dim3(threads), 0, 0, 
           v_size, shared->nodes[from_id].device_ptr(),
           shared_data->device_ptr(), field->data.gpu_wr_ptr(),
           field->is_updated.gpu_wr_ptr());
     } else if (op == addOp) {
-      batch_add_subset<DataType><<<blocks, threads>>>(
+      hipLaunchKernelGGL((batch_add_subset<DataType>), dim3(blocks), dim3(threads), 0, 0, 
           v_size, shared->nodes[from_id].device_ptr(),
           shared_data->device_ptr(), field->data.gpu_wr_ptr(),
           field->is_updated.gpu_wr_ptr());
     } else if (op == minOp) {
-      batch_min_subset<DataType><<<blocks, threads>>>(
+      hipLaunchKernelGGL((batch_min_subset<DataType>), dim3(blocks), dim3(threads), 0, 0, 
           v_size, shared->nodes[from_id].device_ptr(),
           shared_data->device_ptr(), field->data.gpu_wr_ptr(),
           field->is_updated.gpu_wr_ptr());
     }
   } else if (data_mode == gidsData) {
     if (op == setOp) {
-      batch_set_subset<DataType><<<blocks, threads>>>(
+      hipLaunchKernelGGL((batch_set_subset<DataType>), dim3(blocks), dim3(threads), 0, 0, 
           v_size, ctx->offsets.device_ptr(), shared_data->device_ptr(),
           field->data.gpu_wr_ptr(), field->is_updated.gpu_wr_ptr());
     } else if (op == addOp) {
-      batch_add_subset<DataType><<<blocks, threads>>>(
+      hipLaunchKernelGGL((batch_add_subset<DataType>), dim3(blocks), dim3(threads), 0, 0, 
           v_size, ctx->offsets.device_ptr(), shared_data->device_ptr(),
           field->data.gpu_wr_ptr(), field->is_updated.gpu_wr_ptr());
     } else if (op == minOp) {
-      batch_min_subset<DataType><<<blocks, threads>>>(
+      hipLaunchKernelGGL((batch_min_subset<DataType>), dim3(blocks), dim3(threads), 0, 0, 
           v_size, ctx->offsets.device_ptr(), shared_data->device_ptr(),
           field->data.gpu_wr_ptr(), field->is_updated.gpu_wr_ptr());
     }
   } else { // bitsetData || offsetsData
     if (op == setOp) {
-      batch_set_subset<DataType><<<blocks, threads>>>(
+      hipLaunchKernelGGL((batch_set_subset<DataType>), dim3(blocks), dim3(threads), 0, 0, 
           v_size, shared->nodes[from_id].device_ptr(),
           ctx->offsets.device_ptr(), shared_data->device_ptr(),
           field->data.gpu_wr_ptr(), field->is_updated.gpu_wr_ptr());
     } else if (op == addOp) {
-      batch_add_subset<DataType><<<blocks, threads>>>(
+      hipLaunchKernelGGL((batch_add_subset<DataType>), dim3(blocks), dim3(threads), 0, 0, 
           v_size, shared->nodes[from_id].device_ptr(),
           ctx->offsets.device_ptr(), shared_data->device_ptr(),
           field->data.gpu_wr_ptr(), field->is_updated.gpu_wr_ptr());
     } else if (op == minOp) {
-      batch_min_subset<DataType><<<blocks, threads>>>(
+      hipLaunchKernelGGL((batch_min_subset<DataType>), dim3(blocks), dim3(threads), 0, 0, 
           v_size, shared->nodes[from_id].device_ptr(),
           ctx->offsets.device_ptr(), shared_data->device_ptr(),
           field->data.gpu_wr_ptr(), field->is_updated.gpu_wr_ptr());

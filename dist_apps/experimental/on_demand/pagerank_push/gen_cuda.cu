@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 /*
  * This file belongs to the Galois project, a C++ library for exploiting parallelism.
  * The code is being released under the terms of the 3-Clause BSD License (a
@@ -370,7 +371,7 @@ void ResetGraph_cuda(unsigned int  __begin, unsigned int  __end, struct CUDA_Con
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  ResetGraph <<<blocks, threads>>>(ctx->gg, ctx->numNodesWithEdges, __begin, __end, ctx->nout.data.gpu_wr_ptr(), ctx->residual.data.gpu_wr_ptr(), ctx->delta.data.gpu_wr_ptr(), ctx->value.data.gpu_wr_ptr());
+  hipLaunchKernelGGL((ResetGraph), dim3(blocks), dim3(threads), 0, 0, ctx->gg, ctx->numNodesWithEdges, __begin, __end, ctx->nout.data.gpu_wr_ptr(), ctx->residual.data.gpu_wr_ptr(), ctx->delta.data.gpu_wr_ptr(), ctx->value.data.gpu_wr_ptr());
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;
@@ -390,7 +391,7 @@ void InitializeGraph_cuda(unsigned int  __begin, unsigned int  __end, const floa
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  InitializeGraph <<<blocks, __tb_InitializeGraph>>>(ctx->gg, ctx->nout.is_updated.gpu_rd_ptr(), ctx->numNodesWithEdges, __begin, __end, local_alpha, ctx->nout.data.gpu_wr_ptr(), ctx->residual.data.gpu_wr_ptr(), ctx->delta.data.gpu_wr_ptr(), ctx->value.data.gpu_wr_ptr());
+  hipLaunchKernelGGL((InitializeGraph), dim3(blocks), dim3(__tb_InitializeGraph), 0, 0, ctx->gg, ctx->nout.is_updated.gpu_rd_ptr(), ctx->numNodesWithEdges, __begin, __end, local_alpha, ctx->nout.data.gpu_wr_ptr(), ctx->residual.data.gpu_wr_ptr(), ctx->delta.data.gpu_wr_ptr(), ctx->value.data.gpu_wr_ptr());
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;
@@ -410,7 +411,7 @@ void PageRank_delta_cuda(unsigned int  __begin, unsigned int  __end, const float
   // FP: "3 -> 4;
   kernel_sizing(blocks, threads);
   // FP: "4 -> 5;
-  PageRank_delta <<<blocks, __tb_PageRank>>>(ctx->gg, ctx->numNodesWithEdges, __begin, __end, local_alpha, local_tolerance, ctx->nout.data.gpu_wr_ptr(), ctx->residual.data.gpu_wr_ptr(), ctx->delta.data.gpu_wr_ptr(), ctx->value.data.gpu_wr_ptr());
+  hipLaunchKernelGGL((PageRank_delta), dim3(blocks), dim3(__tb_PageRank), 0, 0, ctx->gg, ctx->numNodesWithEdges, __begin, __end, local_alpha, local_tolerance, ctx->nout.data.gpu_wr_ptr(), ctx->residual.data.gpu_wr_ptr(), ctx->delta.data.gpu_wr_ptr(), ctx->value.data.gpu_wr_ptr());
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;
@@ -434,7 +435,7 @@ void PageRank_cuda(unsigned int  __begin, unsigned int  __end, int & __retval, s
   HGAccumulator<int> _rv;
   *(retval.cpu_wr_ptr()) = 0;
   _rv.rv = retval.gpu_wr_ptr();
-  PageRank <<<blocks, __tb_PageRank>>>(ctx->gg, ctx->numNodesWithEdges, __begin, __end, ctx->residual.data.gpu_wr_ptr(), ctx->delta.data.gpu_wr_ptr(), _rv);
+  hipLaunchKernelGGL((PageRank), dim3(blocks), dim3(__tb_PageRank), 0, 0, ctx->gg, ctx->numNodesWithEdges, __begin, __end, ctx->residual.data.gpu_wr_ptr(), ctx->delta.data.gpu_wr_ptr(), _rv);
   // FP: "5 -> 6;
   check_cuda_kernel;
   // FP: "6 -> 7;
@@ -480,7 +481,7 @@ void PageRankSanityCheck_cuda(float & max_value, float & min_value, float & sum_
   HGReduceMin<float> _min_residual;
   *(min_residualval.cpu_wr_ptr()) = 1073741823;
   _min_residual.rv = min_residualval.gpu_wr_ptr();
-  PageRankSanityCheck <<<blocks, __tb_PageRank>>>(ctx->gg, ctx->beginMaster, ctx->beginMaster+ctx->numOwned, tolerance, ctx->residual.data.gpu_rd_ptr(), ctx->value.data.gpu_rd_ptr(), _max_value, _min_value, _sum_value, _sum_residual, _num_residual_over_tolerance, _max_residual, _min_residual);
+  hipLaunchKernelGGL((PageRankSanityCheck), dim3(blocks), dim3(__tb_PageRank), 0, 0, ctx->gg, ctx->beginMaster, ctx->beginMaster+ctx->numOwned, tolerance, ctx->residual.data.gpu_rd_ptr(), ctx->value.data.gpu_rd_ptr(), _max_value, _min_value, _sum_value, _sum_residual, _num_residual_over_tolerance, _max_residual, _min_residual);
   check_cuda_kernel;
   max_value = *(max_valueval.cpu_rd_ptr());
   min_value = *(min_valueval.cpu_rd_ptr());
